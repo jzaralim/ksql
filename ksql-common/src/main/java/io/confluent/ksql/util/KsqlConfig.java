@@ -63,6 +63,10 @@ public class KsqlConfig extends AbstractConfig {
 
   public static final String SCHEMA_REGISTRY_URL_PROPERTY = "ksql.schema.registry.url";
 
+  public static final String CONNECT_URL_PROPERTY = "ksql.connect.url";
+
+  public static final String CASSANDRA_URL_PROPERTY = "ksql.cassandra.url";
+
   public static final String KSQL_ENABLE_UDFS = "ksql.udfs.enabled";
 
   public static final String KSQL_EXT_DIR = "ksql.extension.dir";
@@ -156,6 +160,12 @@ public class KsqlConfig extends AbstractConfig {
 
   public static final String
       defaultSchemaRegistryUrl = "http://localhost:8081";
+
+  public static final String
+      defaultConnectUrl = "http://localhost:8083";
+
+  public static final String
+      defaultCassandraUrl = "http://localhost:9042";
 
   public static final String KSQL_STREAMS_PREFIX = "ksql.streams.";
 
@@ -416,6 +426,18 @@ public class KsqlConfig extends AbstractConfig {
             defaultSchemaRegistryUrl,
             ConfigDef.Importance.MEDIUM,
             "The URL for the schema registry, defaults to http://localhost:8081"
+        ).define(
+            CONNECT_URL_PROPERTY,
+            ConfigDef.Type.STRING,
+            defaultConnectUrl,
+            ConfigDef.Importance.MEDIUM,
+            "The URL for the connect REST API service, defaults to http://localhost:8083"
+        ).define(
+            CASSANDRA_URL_PROPERTY,
+            ConfigDef.Type.STRING,
+            defaultCassandraUrl,
+            ConfigDef.Importance.MEDIUM,
+            "The URL for the connect REST API service, defaults to http://localhost:9042"
         ).define(
             KSQL_ENABLE_UDFS,
             ConfigDef.Type.BOOLEAN,
