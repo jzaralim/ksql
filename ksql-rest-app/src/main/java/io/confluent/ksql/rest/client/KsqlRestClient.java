@@ -15,7 +15,6 @@
 
 package io.confluent.ksql.rest.client;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -25,14 +24,11 @@ import io.confluent.ksql.rest.client.exception.KsqlRestClientException;
 import io.confluent.ksql.rest.entity.CommandStatus;
 import io.confluent.ksql.rest.entity.CommandStatuses;
 import io.confluent.ksql.rest.entity.KsqlEntityList;
-import io.confluent.ksql.rest.entity.KsqlErrorMessage;
 import io.confluent.ksql.rest.entity.KsqlRequest;
 import io.confluent.ksql.rest.entity.ServerInfo;
 import io.confluent.ksql.rest.entity.StreamedRow;
-import io.confluent.ksql.rest.server.resources.Errors;
 import io.confluent.ksql.rest.ssl.DefaultSslClientConfigurer;
 import io.confluent.ksql.rest.ssl.SslClientConfigurer;
-import io.confluent.rest.validation.JacksonMessageBodyProvider;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,39 +47,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-import javax.naming.AuthenticationException;
-import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import org.apache.commons.compress.utils.IOUtils;
-import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
-// CHECKSTYLE_RULES.OFF: ClassDataAbstractionCoupling
 public class KsqlRestClient implements Closeable {
-  // CHECKSTYLE_RULES.ON: ClassDataAbstractionCoupling
-
-  private static final int MAX_TIMEOUT = (int)TimeUnit.SECONDS.toMillis(32);
-
-  private static final KsqlErrorMessage UNAUTHORIZED_ERROR_MESSAGE = new KsqlErrorMessage(
-      Errors.ERROR_CODE_UNAUTHORIZED,
-      new AuthenticationException(
-          "Could not authenticate successfully with the supplied credentials.")
-  );
-
-  private static final KsqlErrorMessage FORBIDDEN_ERROR_MESSAGE = new KsqlErrorMessage(
-      Errors.ERROR_CODE_FORBIDDEN,
-      new AuthenticationException("You are forbidden from using this cluster.")
-  );
-
-  private final Client client;
+  private final RestClient client;
 
   private List<URI> serverAddresses;
 
@@ -120,30 +91,29 @@ public class KsqlRestClient implements Closeable {
       final ClientBuilder clientBuilder,
       final SslClientConfigurer sslClientConfigurer
   ) {
-    this(
-        buildClient(clientBuilder, sslClientConfigurer, clientProps),
-        serverAddress,
-        localProps
+    this.serverAddresses = parseServerAddresses(serverAddress);
+    this.client = new RestClient(
+            getServerAddress().toString(),
+            clientBuilder,
+            sslClientConfigurer,
+            clientProps
     );
+    this.localProperties = new LocalProperties(localProps);
   }
 
   @VisibleForTesting
   KsqlRestClient(
-      final Client client,
-      final String serverAddress,
-      final Map<String, ?> localProps
+          final Client client,
+          final String serverAddress,
+          final Map<String, ?> localProps
   ) {
-    this.client = Objects.requireNonNull(client, "client");
     this.serverAddresses = parseServerAddresses(serverAddress);
+    this.client = new RestClient(getServerAddress().toString(), client);
     this.localProperties = new LocalProperties(localProps);
   }
 
   public void setupAuthenticationCredentials(final String userName, final String password) {
-    final HttpAuthenticationFeature feature = HttpAuthenticationFeature.basic(
-        Objects.requireNonNull(userName),
-        Objects.requireNonNull(password)
-    );
-    client.register(feature);
+    client.setupAuthenticationCredentials(userName, password);
   }
 
   public URI getServerAddress() {
@@ -159,7 +129,7 @@ public class KsqlRestClient implements Closeable {
   }
 
   public RestResponse<ServerInfo> getServerInfo() {
-    return getRequest("/info", ServerInfo.class);
+    return client.getRequest("/info", ServerInfo.class);
   }
 
   public RestResponse<KsqlEntityList> makeKsqlRequest(final String ksql) {
@@ -168,127 +138,34 @@ public class KsqlRestClient implements Closeable {
 
   public RestResponse<KsqlEntityList> makeKsqlRequest(final String ksql, final Long commandSeqNum) {
     final KsqlRequest jsonRequest = new KsqlRequest(ksql, localProperties.toMap(), commandSeqNum);
-    return postRequest("ksql", jsonRequest, Optional.empty(), true,
+    return client.postRequest("ksql", jsonRequest, Optional.empty(), true,
         r -> r.readEntity(KsqlEntityList.class));
   }
 
   public RestResponse<CommandStatuses> makeStatusRequest() {
-    return getRequest("status", CommandStatuses.class);
+    return client.getRequest("status", CommandStatuses.class);
   }
 
   public RestResponse<CommandStatus> makeStatusRequest(final String commandId) {
-    return getRequest(String.format("status/%s", commandId), CommandStatus.class);
+    return client.getRequest(String.format("status/%s", commandId), CommandStatus.class);
   }
 
   public RestResponse<QueryStream> makeQueryRequest(final String ksql, final Long commandSeqNum) {
     final KsqlRequest jsonRequest = new KsqlRequest(ksql, localProperties.toMap(), commandSeqNum);
     final Optional<Integer> readTimeoutMs = Optional.of(QueryStream.READ_TIMEOUT_MS);
-    return postRequest("query", jsonRequest, readTimeoutMs, false, QueryStream::new);
+    return client.postRequest("query", jsonRequest, readTimeoutMs, false, QueryStream::new);
   }
 
   public RestResponse<InputStream> makePrintTopicRequest(
       final String ksql, final Long commandSeqNum) {
     final KsqlRequest jsonRequest = new KsqlRequest(ksql, localProperties.toMap(), commandSeqNum);
-    return postRequest("query", jsonRequest, Optional.empty(), false,
+    return client.postRequest("query", jsonRequest, Optional.empty(), false,
         r -> (InputStream) r.getEntity());
   }
 
   @Override
   public void close() {
     client.close();
-  }
-
-  private <T> RestResponse<T> getRequest(final String path, final Class<T> type) {
-
-    try (Response response = client.target(getServerAddress())
-        .path(path)
-        .request(MediaType.APPLICATION_JSON_TYPE)
-        .get()) {
-
-      return response.getStatus() == Response.Status.OK.getStatusCode()
-          ? RestResponse.successful(response.readEntity(type))
-          : createErrorResponse(path, response);
-
-    } catch (final Exception e) {
-      throw new KsqlRestClientException("Error issuing GET to KSQL server. path:" + path, e);
-    }
-  }
-
-  private <T> RestResponse<T> postRequest(
-      final String path,
-      final Object jsonEntity,
-      final Optional<Integer> readTimeoutMs,
-      final boolean closeResponse,
-      final Function<Response, T> mapper) {
-
-    Response response = null;
-
-    try {
-      final WebTarget target = client.target(getServerAddress())
-          .path(path);
-
-      readTimeoutMs.ifPresent(timeout -> target.property(ClientProperties.READ_TIMEOUT, timeout));
-
-      response = target
-          .request(MediaType.APPLICATION_JSON_TYPE)
-          .post(Entity.json(jsonEntity));
-
-      return response.getStatus() == Response.Status.OK.getStatusCode()
-          ? RestResponse.successful(mapper.apply(response))
-          : createErrorResponse(path, response);
-
-    } catch (final ProcessingException e) {
-      if (shouldRetry(readTimeoutMs, e)) {
-        return postRequest(path, jsonEntity, calcReadTimeout(readTimeoutMs), closeResponse, mapper);
-      }
-      throw new KsqlRestClientException("Error issuing POST to KSQL server. path:" + path, e);
-    } catch (final Exception e) {
-      throw new KsqlRestClientException("Error issuing POST to KSQL server. path:" + path, e);
-    } finally {
-      if (response != null && closeResponse) {
-        response.close();
-      }
-    }
-  }
-
-  private static boolean shouldRetry(
-      final Optional<Integer> readTimeoutMs,
-      final ProcessingException e
-  ) {
-    return readTimeoutMs.map(timeout -> timeout < MAX_TIMEOUT).orElse(false)
-        && e.getCause() instanceof SocketTimeoutException;
-  }
-
-  private static Optional<Integer> calcReadTimeout(final Optional<Integer> previousTimeoutMs) {
-    return previousTimeoutMs.map(timeout -> Math.min(timeout * 2, MAX_TIMEOUT));
-  }
-
-  private static <T> RestResponse<T> createErrorResponse(
-      final String path,
-      final Response response) {
-
-    final KsqlErrorMessage errorMessage = response.readEntity(KsqlErrorMessage.class);
-    if (errorMessage != null) {
-      return RestResponse.erroneous(errorMessage);
-    }
-
-    if (response.getStatus() == Status.NOT_FOUND.getStatusCode()) {
-      return RestResponse.erroneous(404, "Path not found. Path='" + path + "'. "
-          + "Check your ksql http url to make sure you are connecting to a ksql server.");
-    }
-
-    if (response.getStatus() == Status.UNAUTHORIZED.getStatusCode()) {
-      return RestResponse.erroneous(UNAUTHORIZED_ERROR_MESSAGE);
-    }
-
-    if (response.getStatus() == Status.FORBIDDEN.getStatusCode()) {
-      return RestResponse.erroneous(FORBIDDEN_ERROR_MESSAGE);
-    }
-
-    return RestResponse.erroneous(
-        Errors.toErrorCode(response.getStatus()),
-        "The server returned an unexpected error: "
-            + response.getStatusInfo().getReasonPhrase());
   }
 
   public static final class QueryStream implements Closeable, Iterator<StreamedRow> {
@@ -421,27 +298,6 @@ public class KsqlRestClient implements Closeable {
     } catch (final Exception e) {
       throw new KsqlRestClientException(
           "The supplied serverAddress is invalid: " + serverAddress, e);
-    }
-  }
-
-  private static Client buildClient(
-      final ClientBuilder clientBuilder,
-      final SslClientConfigurer sslClientConfigurer,
-      final Map<String, String> props
-  ) {
-    final ObjectMapper objectMapper = JsonMapper.INSTANCE.mapper;
-    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    objectMapper.configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
-    final JacksonMessageBodyProvider jsonProvider = new JacksonMessageBodyProvider(objectMapper);
-
-    try {
-      clientBuilder.register(jsonProvider);
-
-      sslClientConfigurer.configureSsl(clientBuilder, props);
-
-      return clientBuilder.build();
-    } catch (final Exception e) {
-      throw new KsqlRestClientException("Failed to configure rest client", e);
     }
   }
 }
