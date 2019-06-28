@@ -253,6 +253,10 @@ public abstract class DefaultAstVisitor<R, C>
     return visitStatement(node, context);
   }
 
+  protected R visitCreateMaterializedView(final CreateMaterializedView node, final C context) {
+    return visitStatement(node, context);
+  }
+
   protected R visitInsertInto(final InsertInto node, final C context) {
     return visitStatement(node, context);
   }

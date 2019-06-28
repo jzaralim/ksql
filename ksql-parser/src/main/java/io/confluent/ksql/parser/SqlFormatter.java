@@ -24,6 +24,7 @@ import com.google.common.base.Strings;
 import io.confluent.ksql.parser.tree.AliasedRelation;
 import io.confluent.ksql.parser.tree.AllColumns;
 import io.confluent.ksql.parser.tree.AstVisitor;
+import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.CreateStream;
 import io.confluent.ksql.parser.tree.CreateStreamAsSelect;
 import io.confluent.ksql.parser.tree.CreateTable;
@@ -348,6 +349,17 @@ public final class SqlFormatter {
         return name;
       }
       return "\"" + name + "\"";
+    }
+
+    @Override
+    protected Void visitCreateMaterializedView(
+        final CreateMaterializedView node,
+        final Integer indent) {
+      builder.append("CREATE MATERIALIZED VIEW ");
+      builder.append(node.getMaterializedViewName());
+      builder.append(" AS SELECT * FROM ");
+      builder.append(node.getSource());
+      return null;
     }
 
     @Override

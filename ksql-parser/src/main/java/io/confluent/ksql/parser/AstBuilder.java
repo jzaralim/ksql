@@ -40,6 +40,7 @@ import io.confluent.ksql.parser.tree.BetweenPredicate;
 import io.confluent.ksql.parser.tree.BooleanLiteral;
 import io.confluent.ksql.parser.tree.Cast;
 import io.confluent.ksql.parser.tree.ComparisonExpression;
+import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.CreateStream;
 import io.confluent.ksql.parser.tree.CreateStreamAsSelect;
 import io.confluent.ksql.parser.tree.CreateTable;
@@ -251,6 +252,15 @@ public class AstBuilder {
           context.EXISTS() != null,
           processTableProperties(context.tableProperties())
       );
+    }
+
+    @Override
+    public Node visitCreateMaterializedView(
+        final SqlBaseParser.CreateMaterializedViewContext context) {
+      return new CreateMaterializedView(
+          getLocation(context),
+          context.identifier(0).toString(),
+          context.identifier(1).toString());
     }
 
     @Override

@@ -56,6 +56,7 @@ statement
                     (WITH tableProperties)?                                 #createTable
     | CREATE TABLE (IF NOT EXISTS)? qualifiedName
             (WITH tableProperties)? AS query                                #createTableAs
+    | CREATE MATERIALIZED VIEW identifier AS SELECT ASTERISK FROM identifier       #createMaterializedView
     | INSERT INTO qualifiedName query (PARTITION BY identifier)?            #insertInto
     | INSERT INTO qualifiedName (columns)? VALUES values                    #insertValues
     | DROP STREAM (IF EXISTS)? qualifiedName (DELETE TOPIC)?                #dropStream
@@ -426,6 +427,8 @@ UNSET: 'UNSET';
 RUN: 'RUN';
 SCRIPT: 'SCRIPT';
 DECIMAL: 'DECIMAL';
+MATERIALIZED: 'MATERIALIZED';
+VIEW: 'VIEW';
 
 IF: 'IF';
 
