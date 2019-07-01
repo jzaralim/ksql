@@ -259,8 +259,8 @@ public class AstBuilder {
         final SqlBaseParser.CreateMaterializedViewContext context) {
       return new CreateMaterializedView(
           getLocation(context),
-          context.identifier(0).toString(),
-          context.identifier(1).toString());
+          context.identifier(0).getText(),
+          context.identifier(1).getText());
     }
 
     @Override

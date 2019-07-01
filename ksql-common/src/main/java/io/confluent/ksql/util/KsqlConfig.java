@@ -65,7 +65,9 @@ public class KsqlConfig extends AbstractConfig {
 
   public static final String CONNECT_URL_PROPERTY = "ksql.connect.url";
 
-  public static final String CASSANDRA_URL_PROPERTY = "ksql.cassandra.url";
+  public static final String CASSANDRA_HOST_PROPERTY = "ksql.cassandra.host";
+
+  public static final String CASSANDRA_PORT_PROPERTY = "ksql.cassandra.port";
 
   public static final String KSQL_ENABLE_UDFS = "ksql.udfs.enabled";
 
@@ -165,7 +167,10 @@ public class KsqlConfig extends AbstractConfig {
       defaultConnectUrl = "http://localhost:8083";
 
   public static final String
-      defaultCassandraUrl = "http://localhost:9042";
+      defaultCassandraHost = "localhost";
+
+  public static final String
+      defaultCassandraPort = "9042";
 
   public static final String KSQL_STREAMS_PREFIX = "ksql.streams.";
 
@@ -433,11 +438,17 @@ public class KsqlConfig extends AbstractConfig {
             ConfigDef.Importance.MEDIUM,
             "The URL for the connect REST API service, defaults to http://localhost:8083"
         ).define(
-            CASSANDRA_URL_PROPERTY,
+            CASSANDRA_HOST_PROPERTY,
             ConfigDef.Type.STRING,
-            defaultCassandraUrl,
+            defaultCassandraHost,
             ConfigDef.Importance.MEDIUM,
-            "The URL for the connect REST API service, defaults to http://localhost:9042"
+            "The Cassandra host, defaults to localhost"
+        ).define(
+            CASSANDRA_PORT_PROPERTY,
+            ConfigDef.Type.STRING,
+            defaultCassandraPort,
+            ConfigDef.Importance.MEDIUM,
+            "The Cassandra port, defaults to 9042"
         ).define(
             KSQL_ENABLE_UDFS,
             ConfigDef.Type.BOOLEAN,

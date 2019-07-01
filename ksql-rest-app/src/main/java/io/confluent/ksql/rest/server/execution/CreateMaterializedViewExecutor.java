@@ -16,10 +16,17 @@
 package io.confluent.ksql.rest.server.execution;
 
 import io.confluent.ksql.KsqlExecutionContext;
+import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
+import io.confluent.ksql.rest.client.KsqlConnectClient;
+import io.confluent.ksql.rest.client.RestResponse;
+import io.confluent.ksql.rest.entity.ConnectRequest;
+import io.confluent.ksql.rest.entity.ConnectorEntity;
+import io.confluent.ksql.rest.entity.ConnectorInfo;
 import io.confluent.ksql.rest.entity.KsqlEntity;
 import io.confluent.ksql.services.ServiceContext;
 import io.confluent.ksql.statement.ConfiguredStatement;
+import io.confluent.ksql.util.KsqlConfig;
 
 import java.util.Optional;
 
@@ -32,6 +39,23 @@ public final class CreateMaterializedViewExecutor {
       final ConfiguredStatement<CreateMaterializedView> statement,
       final KsqlExecutionContext executionContext,
       final ServiceContext serviceContext) {
-    return Optional.empty();
+    final KsqlConfig config = statement.getConfig();
+    final DataSource<?> dataSource =
+        executionContext.getMetaStore().getSource(statement.getStatement().getSource());
+    if (!dataSource.getDataSourceType().equals(DataSource.DataSourceType.KTABLE)) {
+      return Optional.empty();
+    }
+    final ConnectRequest request = new ConnectRequest(
+        statement.getStatement().getMaterializedViewName(),
+        dataSource,
+        config);
+    final KsqlConnectClient client =
+        new KsqlConnectClient(
+            config
+            .getAllConfigPropsWithSecretsObfuscated()
+            .get(KsqlConfig.CONNECT_URL_PROPERTY)
+        );
+    final RestResponse<ConnectorInfo> response = client.createNewConnector(request);
+    return Optional.of(new ConnectorEntity(statement.getStatementText(), response.getResponse()));
   }
 }

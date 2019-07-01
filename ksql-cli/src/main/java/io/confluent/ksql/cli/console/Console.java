@@ -40,6 +40,7 @@ import io.confluent.ksql.cli.console.table.builder.TopicDescriptionTableBuilder;
 import io.confluent.ksql.json.JsonMapper;
 import io.confluent.ksql.rest.entity.ArgumentInfo;
 import io.confluent.ksql.rest.entity.CommandStatusEntity;
+import io.confluent.ksql.rest.entity.ConnectorEntity;
 import io.confluent.ksql.rest.entity.ExecutionPlan;
 import io.confluent.ksql.rest.entity.FieldInfo;
 import io.confluent.ksql.rest.entity.FunctionDescriptionList;
@@ -135,6 +136,8 @@ public class Console implements Closeable {
               tablePrinter(FunctionNameList.class, FunctionNameListTableBuilder::new))
           .put(FunctionDescriptionList.class,
               Console::printFunctionDescription)
+          .put(ConnectorEntity.class,
+              Console::printConnectorInfo)
           .build();
 
   private static <T extends KsqlEntity> Handler1<KsqlEntity, Console> tablePrinter(
@@ -643,6 +646,11 @@ public class Console implements Closeable {
               .forEach(a -> printDescription(subFormat, a.getName(), a.getDescription()));
         }
     );
+  }
+
+  private void printConnectorInfo(final ConnectorEntity connectorEntity) {
+    writer().printf("Materialized view %s has been created\n",
+        connectorEntity.getConnectorInfo().getName());
   }
 
   private static String argToString(final ArgumentInfo arg) {
