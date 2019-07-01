@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2019 Confluent Inc.
  *
@@ -37,7 +38,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class KsqlRestClientTest {
+public class RestClientTest {
 
   private static final String SERVER_ADDRESS = "http://timbuktu";
 
@@ -51,13 +52,10 @@ public class KsqlRestClientTest {
   @Mock
   private Client client;
   private Map<String, String> clientProps;
-  private Map<String, String> localProps;
 
   @Before
   public void setUp() {
     clientProps = new HashMap<>();
-    localProps = new HashMap<>();
-
     when(clientBuilder.build()).thenReturn(client);
   }
 
@@ -67,7 +65,7 @@ public class KsqlRestClientTest {
     clientProps.put(RestConfig.SSL_TRUSTSTORE_LOCATION_CONFIG, "/trust/store/path");
 
     // When:
-    new KsqlRestClient(SERVER_ADDRESS, localProps, clientProps, clientBuilder, sslClientConfigurer);
+    new RestClient(SERVER_ADDRESS, clientBuilder, sslClientConfigurer, clientProps);
 
     // Then:
     verify(sslClientConfigurer).configureSsl(clientBuilder, clientProps);
@@ -84,7 +82,7 @@ public class KsqlRestClientTest {
     expectedException.expectCause(hasMessage(is("boom")));
 
     // When:
-    new KsqlRestClient(SERVER_ADDRESS, localProps, clientProps, clientBuilder, sslClientConfigurer);
+    new RestClient(SERVER_ADDRESS, clientBuilder, sslClientConfigurer, clientProps);
   }
 
   @Test
@@ -94,6 +92,6 @@ public class KsqlRestClientTest {
     expectedException.expectMessage("The supplied serverAddress is invalid: timbuktu");
 
     // When:
-    new KsqlRestClient("timbuktu", localProps, clientProps, clientBuilder, sslClientConfigurer);
+    new RestClient("timbuktu", clientBuilder, sslClientConfigurer, clientProps);
   }
 }
