@@ -27,7 +27,8 @@ public interface DataSource<K> {
 
   enum DataSourceType {
     KSTREAM("STREAM"),
-    KTABLE("TABLE");
+    KTABLE("TABLE"),
+    MATERIALIZED("MATERIALIZED");
 
     private final String ksqlType;
 

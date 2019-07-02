@@ -16,7 +16,10 @@
 package io.confluent.ksql.rest.server.execution;
 
 import io.confluent.ksql.KsqlExecutionContext;
+import io.confluent.ksql.metastore.MutableMetaStore;
 import io.confluent.ksql.metastore.model.DataSource;
+import io.confluent.ksql.metastore.model.KsqlTable;
+import io.confluent.ksql.metastore.model.MaterializedView;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.rest.client.KsqlConnectClient;
 import io.confluent.ksql.rest.client.RestResponse;
@@ -40,9 +43,9 @@ public final class CreateMaterializedViewExecutor {
       final KsqlExecutionContext executionContext,
       final ServiceContext serviceContext) {
     final KsqlConfig config = statement.getConfig();
-    final DataSource<?> dataSource =
-        executionContext.getMetaStore().getSource(statement.getStatement().getSource());
-    if (!dataSource.getDataSourceType().equals(DataSource.DataSourceType.KTABLE)) {
+    final MutableMetaStore metaStore = (MutableMetaStore) executionContext.getMetaStore();
+    final DataSource<?> dataSource = metaStore.getSource(statement.getStatement().getSource());
+    if (!(dataSource instanceof KsqlTable)) {
       return Optional.empty();
     }
     final ConnectRequest request = new ConnectRequest(
@@ -56,6 +59,16 @@ public final class CreateMaterializedViewExecutor {
             .get(KsqlConfig.CONNECT_URL_PROPERTY)
         );
     final RestResponse<ConnectorInfo> response = client.createNewConnector(request);
+    metaStore.putSource(new MaterializedView<>(
+        statement.getStatementText(),
+        statement.getStatement().getMaterializedViewName(),
+        dataSource.getSchema(),
+        dataSource.getSerdeOptions(),
+        dataSource.getKeyField(),
+        dataSource.getTimestampExtractionPolicy(),
+        dataSource.getKsqlTopic(),
+        dataSource.getKeySerdeFactory()));
+    metaStore.putConnector(statement.getStatement().getMaterializedViewName());
     return Optional.of(new ConnectorEntity(statement.getStatementText(), response.getResponse()));
   }
 }

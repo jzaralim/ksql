@@ -24,6 +24,7 @@ import io.confluent.ksql.metastore.model.KsqlTopic;
 import io.confluent.ksql.util.KsqlException;
 import io.confluent.ksql.util.KsqlReferentialIntegrityException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +40,7 @@ public final class MetaStoreImpl implements MutableMetaStore {
 
   private final Map<String, KsqlTopic> topics = new ConcurrentHashMap<>();
   private final Map<String, SourceInfo> dataSources = new ConcurrentHashMap<>();
+  private final Set<String> connectors = new HashSet<>();
   private final Object referentialIntegrityLock = new Object();
   private final FunctionRegistry functionRegistry;
 
@@ -99,6 +101,11 @@ public final class MetaStoreImpl implements MutableMetaStore {
   }
 
   @Override
+  public void putConnector(final String connector) {
+    connectors.add(connector);
+  }
+
+  @Override
   public void deleteTopic(final String topicName) {
     if (topics.remove(topicName) == null) {
       throw new KsqlException(String.format("No topic with name %s was registered.", topicName));
@@ -135,6 +142,11 @@ public final class MetaStoreImpl implements MutableMetaStore {
         return null;
       });
     }
+  }
+
+  @Override
+  public void removeConnector(final String connector) {
+    connectors.remove(connector);
   }
 
   @Override

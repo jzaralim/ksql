@@ -649,7 +649,7 @@ public class Console implements Closeable {
   }
 
   private void printConnectorInfo(final ConnectorEntity connectorEntity) {
-    writer().printf("Materialized view %s has been created\n",
+    writer().printf("Materialized view %s has been created%n",
         connectorEntity.getConnectorInfo().getName());
   }
 

@@ -25,6 +25,8 @@ public interface MutableMetaStore extends MetaStore {
 
   void putSource(DataSource<?> dataSource);
 
+  void putConnector(String connector);
+
   void deleteTopic(String topicName);
 
   void deleteSource(String sourceName);
@@ -35,6 +37,8 @@ public interface MutableMetaStore extends MetaStore {
       Set<String> sinkNames);
 
   void removePersistentQuery(String queryId);
+
+  void removeConnector(String connector);
 
   MutableMetaStore copy();
 }
