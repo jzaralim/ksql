@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
@@ -36,15 +37,16 @@ import io.confluent.ksql.logging.processing.ProcessingLogConfig;
 import io.confluent.ksql.logging.processing.ProcessingLogContext;
 import io.confluent.ksql.parser.KsqlParser.ParsedStatement;
 import io.confluent.ksql.parser.KsqlParser.PreparedStatement;
-import io.confluent.ksql.parser.tree.CreateSource;
 import io.confluent.ksql.rest.server.computation.CommandRunner;
 import io.confluent.ksql.rest.server.computation.CommandStore;
 import io.confluent.ksql.rest.server.computation.QueuedCommandStatus;
 import io.confluent.ksql.rest.server.context.KsqlRestServiceContextBinder;
+import io.confluent.ksql.rest.server.filters.KsqlAuthorizationFilter;
 import io.confluent.ksql.rest.server.resources.KsqlResource;
 import io.confluent.ksql.rest.server.resources.RootDocument;
 import io.confluent.ksql.rest.server.resources.StatusResource;
 import io.confluent.ksql.rest.server.resources.streaming.StreamedQueryResource;
+import io.confluent.ksql.rest.server.security.KsqlAuthorizationProvider;
 import io.confluent.ksql.rest.server.security.KsqlSecurityExtension;
 import io.confluent.ksql.rest.server.state.ServerState;
 import io.confluent.ksql.rest.util.ProcessingLogServerUtils;
@@ -120,7 +122,7 @@ public class KsqlRestApplicationTest {
   private ParsedStatement parsedStatement;
   @Mock
   private PreparedStatement<?> preparedStatement;
-  private PreparedStatement<CreateSource> logCreateStatement;
+  private PreparedStatement<?> logCreateStatement;
   private KsqlRestApplication app;
 
   @SuppressWarnings("unchecked")
@@ -193,7 +195,7 @@ public class KsqlRestApplicationTest {
   }
 
   @Test
-  public void shouldRegisterRestSecurityExtension() {
+  public void shouldNotRegisterAuthorizationFilterWithoutAuthorizationProvider() {
     // Given:
     final Configurable<?> configurable = mock(Configurable.class);
 
@@ -201,7 +203,21 @@ public class KsqlRestApplicationTest {
     app.configureBaseApplication(configurable, Collections.emptyMap());
 
     // Then:
-    verify(securityExtension).register(configurable, ksqlConfig);
+    verify(configurable, times(0)).register(any(KsqlAuthorizationFilter.class));
+  }
+
+  @Test
+  public void shouldRegisterAuthorizationFilterWithAuthorizationProvider() {
+    // Given:
+    final Configurable<?> configurable = mock(Configurable.class);
+    final KsqlAuthorizationProvider provider = mock(KsqlAuthorizationProvider.class);
+    when(securityExtension.getAuthorizationProvider()).thenReturn(Optional.of(provider));
+
+    // When:
+    app.configureBaseApplication(configurable, Collections.emptyMap());
+
+    // Then:
+    verify(configurable).register(any(KsqlAuthorizationFilter.class));
   }
 
   @Test

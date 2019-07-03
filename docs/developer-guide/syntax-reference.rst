@@ -833,6 +833,7 @@ For example, the statements below would all be valid for a source with schema
 The values will serialize using the ``value_format`` specified in the original `CREATE` statement.
 The key will always be serialized as a String.
 
+.. _ksql-syntax-describe:
 
 DESCRIBE
 --------
@@ -945,6 +946,7 @@ DESCRIBE FUNCTION
 
 Provides a description of a function including an input parameters and the return type.
 
+.. _ksql-syntax-explain:
 
 EXPLAIN
 -------
@@ -1515,6 +1517,15 @@ Scalar functions
 | CEIL                   |  ``CEIL(col1)``                                                           | The ceiling of a value.                           |
 +------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
 | CONCAT                 |  ``CONCAT(col1, '_hello')``                                               | Concatenate two strings.                          |
++------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
+| UNIX_DATE              |  ``UNIX_DATE()``                                                          | Gets an integer representing days since epoch.    |
+|                        |                                                                           | The returned timestamp may differ depending on    |
+|                        |                                                                           | the local time of different KSQL Server instances.|
++------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
+| UNIX_TIMESTAMP         |  ``UNIX_TIMESTAMP()``                                                     | Gets the Unix timestamp in milliseconds,          |
+|                        |                                                                           | represented as a BIGINT.                          |
+|                        |                                                                           | The returned timestamp may differ depending on    |
+|                        |                                                                           | the local time of different KSQL Server instances.|
 +------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
 | DATETOSTRING           |  ``DATETOSTRING(START_DATE, 'yyyy-MM-dd')``                               | Converts an integer representation of a date into |
 |                        |                                                                           | a string representing the date in                 |

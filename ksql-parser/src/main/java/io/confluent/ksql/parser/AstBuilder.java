@@ -48,7 +48,6 @@ import io.confluent.ksql.parser.tree.CreateTableAsSelect;
 import io.confluent.ksql.parser.tree.DecimalLiteral;
 import io.confluent.ksql.parser.tree.DereferenceExpression;
 import io.confluent.ksql.parser.tree.DescribeFunction;
-import io.confluent.ksql.parser.tree.DoubleLiteral;
 import io.confluent.ksql.parser.tree.DropStream;
 import io.confluent.ksql.parser.tree.DropTable;
 import io.confluent.ksql.parser.tree.Explain;
@@ -100,6 +99,7 @@ import io.confluent.ksql.parser.tree.StringLiteral;
 import io.confluent.ksql.parser.tree.SubscriptExpression;
 import io.confluent.ksql.parser.tree.Table;
 import io.confluent.ksql.parser.tree.TableElement;
+import io.confluent.ksql.parser.tree.TableElements;
 import io.confluent.ksql.parser.tree.TerminateQuery;
 import io.confluent.ksql.parser.tree.TimeLiteral;
 import io.confluent.ksql.parser.tree.TimestampLiteral;
@@ -207,10 +207,11 @@ public class AstBuilder {
       final List<TableElement> elements = context.tableElements() == null
           ? ImmutableList.of()
           : visit(context.tableElements().tableElement(), TableElement.class);
+
       return new CreateTable(
           getLocation(context),
           ParserUtil.getQualifiedName(context.qualifiedName()),
-          elements,
+          TableElements.of(elements),
           context.EXISTS() != null,
           processTableProperties(context.tableProperties())
       );
@@ -221,10 +222,11 @@ public class AstBuilder {
       final List<TableElement> elements = context.tableElements() == null
           ? ImmutableList.of()
           : visit(context.tableElements().tableElement(), TableElement.class);
+
       return new CreateStream(
           getLocation(context),
           ParserUtil.getQualifiedName(context.qualifiedName()),
-          elements,
+          TableElements.of(elements),
           context.EXISTS() != null,
           processTableProperties(context.tableProperties())
       );
@@ -1054,7 +1056,7 @@ public class AstBuilder {
 
     @Override
     public Node visitDecimalLiteral(final SqlBaseParser.DecimalLiteralContext context) {
-      return new DoubleLiteral(getLocation(context), context.getText());
+      return ParserUtil.parseDecimalLiteral(context);
     }
 
     @Override
