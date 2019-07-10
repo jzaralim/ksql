@@ -50,7 +50,7 @@ public final class CreateMaterializedViewExecutor {
     }
     final ConnectRequest request = new ConnectRequest(
         statement.getStatement().getMaterializedViewName(),
-        dataSource,
+        (KsqlTable) dataSource,
         config);
     final KsqlConnectClient client =
         new KsqlConnectClient(

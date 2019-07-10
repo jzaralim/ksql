@@ -19,7 +19,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
-import io.confluent.ksql.metastore.model.DataSource;
+import io.confluent.ksql.metastore.model.KsqlTable;
 import io.confluent.ksql.util.KsqlConfig;
 
 import java.util.HashMap;
@@ -34,7 +34,7 @@ public class ConnectRequest {
 
   public ConnectRequest(
       final String name,
-      final DataSource<?> dataSource,
+      final KsqlTable<?> dataSource,
       final KsqlConfig ksqlConfig) {
     this(name, cassandraConfigBuilder(name, dataSource, ksqlConfig));
   }
@@ -78,7 +78,7 @@ public class ConnectRequest {
 
   private static Map<String, Object> cassandraConfigBuilder(
       final String name,
-      final DataSource<?> dataSource,
+      final KsqlTable<?> dataSource,
       final KsqlConfig ksqlConfig) {
     final Map<String, String> properties = ksqlConfig.getAllConfigPropsWithSecretsObfuscated();
     final Map<String, Object> config = new HashMap<String, Object>();
@@ -108,9 +108,11 @@ public class ConnectRequest {
         config.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
     }
 
-    config.put("transforms", "ValueToKey");
-    config.put("transforms.ValueToKey.type", "org.apache.kafka.connect.transforms.ValueToKey");
-    config.put("transforms.ValueToKey.fields", dataSource.getKeyField().name().get());
+    config.put("transforms", "KeyToValueTransform");
+    config.put("transforms.KeyToValueTransform.type",
+        "com.github.jzaralim.kafka.connect.transform.keytovalue.KeyToValueTransform");
+
+
     config.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
 
     return config;
