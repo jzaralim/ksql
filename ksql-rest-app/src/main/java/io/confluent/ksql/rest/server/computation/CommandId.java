@@ -31,6 +31,7 @@ public class CommandId {
     TOPIC,
     STREAM,
     TABLE,
+    MATERIALIZED_VIEW,
     CLUSTER,
     TERMINATE
   }

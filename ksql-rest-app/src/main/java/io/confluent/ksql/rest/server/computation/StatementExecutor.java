@@ -19,9 +19,13 @@ import com.google.common.collect.Lists;
 import io.confluent.ksql.engine.KsqlEngine;
 import io.confluent.ksql.exception.ExceptionUtil;
 import io.confluent.ksql.metastore.MetaStore;
+import io.confluent.ksql.metastore.MutableMetaStore;
+import io.confluent.ksql.metastore.model.KsqlTable;
+import io.confluent.ksql.metastore.model.MaterializedView;
 import io.confluent.ksql.parser.KsqlParser.ParsedStatement;
 import io.confluent.ksql.parser.KsqlParser.PreparedStatement;
 import io.confluent.ksql.parser.tree.CreateAsSelect;
+import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.CreateTableAsSelect;
 import io.confluent.ksql.parser.tree.ExecutableDdlStatement;
 import io.confluent.ksql.parser.tree.InsertInto;
@@ -202,6 +206,9 @@ public class StatementExecutor {
       successMessage = "Query terminated.";
     } else if (statement.getStatement() instanceof RunScript) {
       handleLegacyRunScript(command, mode);
+    } else if (statement.getStatement() instanceof CreateMaterializedView) {
+      addMaterializedViewToMetaStore(statement);
+      successMessage = "Materialized view " + " is ready";
     } else {
       throw new KsqlException(String.format(
           "Unexpected statement type: %s",
@@ -338,5 +345,18 @@ public class StatementExecutor {
         .filter(Optional::isPresent)
         .map(Optional::get)
         .forEach(QueryMetadata::close);
+  }
+
+  private void addMaterializedViewToMetaStore(final PreparedStatement<?> statement) {
+    final CreateMaterializedView createMaterializedView =
+        (CreateMaterializedView) statement.getStatement();
+    final MutableMetaStore metaStore = (MutableMetaStore) ksqlEngine.getMetaStore();
+    final KsqlTable<?> dataSource =
+        (KsqlTable) metaStore.getSource(createMaterializedView.getSource());
+    metaStore.putSource(new MaterializedView<>(
+        statement.getStatementText(),
+        createMaterializedView.getMaterializedViewName().toUpperCase(),
+        dataSource));
+    metaStore.putConnector(createMaterializedView.getMaterializedViewName());
   }
 }

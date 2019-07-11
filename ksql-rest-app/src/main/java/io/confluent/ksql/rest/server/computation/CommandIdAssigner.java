@@ -16,6 +16,7 @@
 package io.confluent.ksql.rest.server.computation;
 
 import com.google.common.collect.ImmutableMap;
+import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.CreateStream;
 import io.confluent.ksql.parser.tree.CreateStreamAsSelect;
 import io.confluent.ksql.parser.tree.CreateTable;
@@ -56,6 +57,8 @@ public class CommandIdAssigner {
             command -> getDropTableCommandId((DropTable) command))
           .put(TerminateCluster.class,
             command -> new CommandId(Type.CLUSTER, "TerminateCluster", Action.TERMINATE))
+          .put(CreateMaterializedView.class,
+              command -> getCreateMaterializedViewCommandId((CreateMaterializedView) command))
           .build();
 
   public CommandIdAssigner() {
@@ -128,5 +131,14 @@ public class CommandIdAssigner {
 
   private static CommandId getSourceCommandId(final CommandId.Type type, final String sourceName) {
     return new CommandId(type, sourceName, CommandId.Action.CREATE);
+  }
+
+  private static CommandId getCreateMaterializedViewCommandId(
+      final CreateMaterializedView createMaterializedView) {
+    return new CommandId(
+        CommandId.Type.MATERIALIZED_VIEW,
+        createMaterializedView.getMaterializedViewName(),
+        CommandId.Action.CREATE
+    );
   }
 }
