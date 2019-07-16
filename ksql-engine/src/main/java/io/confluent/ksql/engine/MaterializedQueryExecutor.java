@@ -23,6 +23,7 @@ import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.parser.tree.AliasedRelation;
 import io.confluent.ksql.parser.tree.Query;
 import io.confluent.ksql.parser.tree.SelectItem;
+import io.confluent.ksql.parser.tree.SingleColumn;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -53,13 +54,16 @@ public class MaterializedQueryExecutor {
         .one();
 
     final List<Object> result = new ArrayList<>();
-    if (selectItemList.size() == 1 && selectItemList.get(0).toString().equals("*")) {
-      for (Field field : dataSource.getSchema().valueSchema().fields()) {
-        result.add(getResultItem(row, field));
-      }
-    } else {
-      for (final SelectItem item : selectItemList) {
-        result.add(getResultItem(row, dataSource.getSchema().findField(item.toString()).get()));
+    for (final SelectItem item : selectItemList) {
+      if (item instanceof SingleColumn) {
+        result.add(getResultItem(
+            row,
+            dataSource.getSchema().findField(((SingleColumn) item).getAlias()).get()
+        ));
+      } else {
+        for (Field field : dataSource.getSchema().valueSchema().fields()) {
+          result.add(getResultItem(row, field));
+        }
       }
     }
     return new GenericRow(result);
@@ -68,7 +72,9 @@ public class MaterializedQueryExecutor {
   private String getCassandraQuery(final String statement, final Query query) {
     final String from = ((AliasedRelation) query.getFrom()).getAlias();
     String cassandraQuery =
-        statement.replace(from, from + "." + metaStore.getSource(from).getKafkaTopicName());
+        statement
+            .toUpperCase()
+            .replace(from, from + "." + metaStore.getSource(from).getKafkaTopicName());
     if (query.getWhere().isPresent()) {
       cassandraQuery = cassandraQuery.replace(";"," ALLOW FILTERING;");
     }
