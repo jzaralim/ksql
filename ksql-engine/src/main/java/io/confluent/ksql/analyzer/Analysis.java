@@ -25,6 +25,7 @@ import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.metastore.model.KsqlStream;
 import io.confluent.ksql.metastore.model.KsqlTable;
 import io.confluent.ksql.metastore.model.KsqlTopic;
+import io.confluent.ksql.metastore.model.MaterializedView;
 import io.confluent.ksql.parser.tree.DereferenceExpression;
 import io.confluent.ksql.parser.tree.Expression;
 import io.confluent.ksql.parser.tree.QualifiedName;
@@ -178,7 +179,9 @@ public class Analysis {
   }
 
   void addDataSource(final String alias, final DataSource<?> dataSource) {
-    if (!(dataSource instanceof KsqlStream) && !(dataSource instanceof KsqlTable)) {
+    if (!(dataSource instanceof KsqlStream)
+        && !(dataSource instanceof KsqlTable)
+        && !(dataSource instanceof MaterializedView)) {
       throw new IllegalArgumentException("Data source type not supported yet: " + dataSource);
     }
 

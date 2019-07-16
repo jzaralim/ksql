@@ -16,13 +16,18 @@
 package io.confluent.ksql.rest.server.resources.streaming;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.confluent.ksql.GenericRow;
 import io.confluent.ksql.engine.KsqlEngine;
+import io.confluent.ksql.engine.MaterializedQueryExecutor;
 import io.confluent.ksql.engine.TopicAccessValidator;
 import io.confluent.ksql.json.JsonMapper;
+import io.confluent.ksql.metastore.model.DataSource.DataSourceType;
 import io.confluent.ksql.parser.KsqlParser.PreparedStatement;
+import io.confluent.ksql.parser.tree.AliasedRelation;
 import io.confluent.ksql.parser.tree.PrintTopic;
 import io.confluent.ksql.parser.tree.Query;
 import io.confluent.ksql.rest.entity.KsqlRequest;
+import io.confluent.ksql.rest.entity.StreamedRow;
 import io.confluent.ksql.rest.entity.Versions;
 import io.confluent.ksql.rest.server.StatementParser;
 import io.confluent.ksql.rest.server.computation.CommandQueue;
@@ -66,6 +71,7 @@ public class StreamedQueryResource {
   private final ObjectMapper objectMapper;
   private final ActivenessRegistrar activenessRegistrar;
   private final TopicAccessValidator topicAccessValidator;
+  private final MaterializedQueryExecutor materializedQueryExecutor;
 
   public StreamedQueryResource(
       final KsqlConfig ksqlConfig,
@@ -89,6 +95,8 @@ public class StreamedQueryResource {
     this.activenessRegistrar =
         Objects.requireNonNull(activenessRegistrar, "activenessRegistrar");
     this.topicAccessValidator = topicAccessValidator;
+    this.materializedQueryExecutor =
+    getMaterializedQueryExecutor(ksqlConfig.getAllConfigPropsWithSecretsObfuscated());
   }
 
   @POST
@@ -104,6 +112,15 @@ public class StreamedQueryResource {
         commandQueue, request, commandQueueCatchupTimeout);
 
     return handleStatement(serviceContext, request, statement);
+  }
+
+  private MaterializedQueryExecutor getMaterializedQueryExecutor(
+      final Map<String, String> configs) {
+    return new MaterializedQueryExecutor(
+        configs.get(KsqlConfig.CASSANDRA_HOST_PROPERTY),
+        Integer.parseInt(configs.get(KsqlConfig.CASSANDRA_PORT_PROPERTY)),
+        ksqlEngine.getMetaStore()
+    );
   }
 
   private PreparedStatement<?> parseStatement(final KsqlRequest request) {
@@ -163,6 +180,13 @@ public class StreamedQueryResource {
         statement.getStatement()
     );
 
+    if (ksqlEngine
+        .getMetaStore()
+        .getSource(((AliasedRelation) statement.getStatement().getFrom()).getAlias())
+        .getDataSourceType() == DataSourceType.MATERIALIZED) {
+      return handleMaterializedQuery(statement);
+    }
+
     final QueryMetadata query = ksqlEngine.execute(serviceContext, configured)
         .getQuery()
         .get();
@@ -181,6 +205,14 @@ public class StreamedQueryResource {
 
     log.info("Streaming query '{}'", statement.getStatementText());
     return Response.ok().entity(queryStreamWriter).build();
+  }
+
+  private Response handleMaterializedQuery(final PreparedStatement<Query> statement) {
+    final GenericRow row = materializedQueryExecutor.executeQuery(
+        statement.getStatementText(),
+        statement.getStatement()
+    );
+    return Response.ok().entity(StreamedRow.row(row)).build();
   }
 
   private Response handlePrintTopic(
