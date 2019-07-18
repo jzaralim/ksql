@@ -20,8 +20,9 @@ import io.confluent.ksql.metastore.SerdeFactory;
 import io.confluent.ksql.schema.ksql.LogicalSchema;
 import io.confluent.ksql.serde.SerdeOption;
 import io.confluent.ksql.util.timestamp.TimestampExtractionPolicy;
-
 import java.util.Set;
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.streams.kstream.WindowedSerdes;
 
 @Immutable
 public class MaterializedView<K> extends StructuredDataSource<K> {
@@ -67,5 +68,11 @@ public class MaterializedView<K> extends StructuredDataSource<K> {
   @Override
   public String toString() {
     return getClass().getSimpleName() + " name:" + getName();
+  }
+
+  public boolean isWindowed() {
+    final Serde<K> keySerde = getKeySerdeFactory().create();
+    return keySerde instanceof WindowedSerdes.SessionWindowedSerde
+        || keySerde instanceof WindowedSerdes.TimeWindowedSerde;
   }
 }

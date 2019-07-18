@@ -15,21 +15,27 @@
 
 package io.confluent.ksql.engine;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.cql.Row;
 import io.confluent.ksql.GenericRow;
 import io.confluent.ksql.metastore.MetaStore;
 import io.confluent.ksql.metastore.model.DataSource;
+import io.confluent.ksql.metastore.model.MaterializedView;
 import io.confluent.ksql.parser.tree.AliasedRelation;
 import io.confluent.ksql.parser.tree.Query;
 import io.confluent.ksql.parser.tree.SelectItem;
 import io.confluent.ksql.parser.tree.SingleColumn;
+import io.confluent.ksql.util.KsqlException;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.streams.kstream.Windowed;
 
 public class MaterializedQueryExecutor {
   private final CqlSession session;
@@ -43,42 +49,63 @@ public class MaterializedQueryExecutor {
         .build();
   }
 
-  public GenericRow executeQuery(
+  public List<GenericRow> executeQuery(
       final String statement,
       final Query query) {
     final String from = ((AliasedRelation) query.getFrom()).getAlias();
     final DataSource<?> dataSource = metaStore.getSource(from);
     final List<SelectItem> selectItemList = query.getSelect().getSelectItems();
-    final Row row = session
-        .execute(getCassandraQuery(statement, query))
-        .one();
+    final ResultSet rows = session
+        .execute(getCassandraQuery(statement, query));
+    if (rows == null) {
+      throw new KsqlException("No results for query.");
+    }
 
-    final List<Object> result = new ArrayList<>();
-    for (final SelectItem item : selectItemList) {
-      if (item instanceof SingleColumn) {
-        result.add(getResultItem(
-            row,
-            dataSource.getSchema().findField(((SingleColumn) item).getAlias()).get()
-        ));
-      } else {
-        for (Field field : dataSource.getSchema().valueSchema().fields()) {
-          result.add(getResultItem(row, field));
+    final List<GenericRow> results = new ArrayList<>();
+
+    for (final Row row : rows) {
+      final List<Object> columns = new ArrayList<>();
+      for (final SelectItem item : selectItemList) {
+        if (item instanceof SingleColumn) {
+          columns.add(getResultItem(
+              row,
+              dataSource.getSchema().findField(((SingleColumn) item).getAlias()).get()
+          ));
+        } else {
+          for (Field field : dataSource.getSchema().valueSchema().fields()) {
+            columns.add(getResultItem(row, field));
+          }
         }
       }
+      if (((MaterializedView) dataSource).isWindowed()) {
+        final Windowed windowedKey = (Windowed) dataSource
+            .getKeySerdeFactory()
+            .create()
+            .deserializer()
+            .deserialize(dataSource.getKafkaTopicName(), row.getString("rowkey").getBytes(UTF_8));
+        columns.add(windowedKey.window().startTime().getEpochSecond());
+        columns.add(windowedKey.window().endTime().getEpochSecond());
+      }
+      results.add(new GenericRow(columns));
     }
-    return new GenericRow(result);
+
+    return results;
   }
 
   private String getCassandraQuery(final String statement, final Query query) {
     final String from = ((AliasedRelation) query.getFrom()).getAlias();
-    String cassandraQuery =
-        statement
-            .toUpperCase()
-            .replace(from, from + "." + metaStore.getSource(from).getKafkaTopicName());
+    final String preWhere;
+    final String postWhere;
+
     if (query.getWhere().isPresent()) {
-      cassandraQuery = cassandraQuery.replace(";"," ALLOW FILTERING;");
+      preWhere = statement.substring(0, statement.indexOf("WHERE")).toUpperCase();
+      postWhere = statement.substring(statement.indexOf("WHERE")).replace(";", " ALLOW FILTERING;");
+    } else {
+      preWhere = statement.toUpperCase();
+      postWhere = "";
     }
-    return cassandraQuery;
+    return preWhere.replace(from, from + "." + metaStore.getSource(from).getKafkaTopicName())
+        + postWhere;
   }
 
   private Object getResultItem(final Row row, final Field field) {

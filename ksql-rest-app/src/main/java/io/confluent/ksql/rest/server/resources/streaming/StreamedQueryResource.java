@@ -15,6 +15,7 @@
 
 package io.confluent.ksql.rest.server.resources.streaming;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.confluent.ksql.GenericRow;
 import io.confluent.ksql.engine.KsqlEngine;
@@ -43,6 +44,7 @@ import io.confluent.ksql.util.TransientQueryMetadata;
 import io.confluent.ksql.version.metrics.ActivenessRegistrar;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import javax.ws.rs.Consumes;
@@ -207,12 +209,19 @@ public class StreamedQueryResource {
     return Response.ok().entity(queryStreamWriter).build();
   }
 
-  private Response handleMaterializedQuery(final PreparedStatement<Query> statement) {
-    final GenericRow row = materializedQueryExecutor.executeQuery(
+  private Response handleMaterializedQuery(final PreparedStatement<Query> statement)
+      throws JsonProcessingException {
+    final List<GenericRow> rows = materializedQueryExecutor.executeQuery(
         statement.getStatementText(),
         statement.getStatement()
     );
-    return Response.ok().entity(StreamedRow.row(row)).build();
+
+    String entity = "";
+    for (final GenericRow row : rows) {
+      entity = entity.concat("\n\n" + objectMapper.writeValueAsString(StreamedRow.row(row)));
+    }
+
+    return Response.ok().entity(entity).build();
   }
 
   private Response handlePrintTopic(
