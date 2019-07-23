@@ -352,11 +352,16 @@ public class StatementExecutor {
         (CreateMaterializedView) statement.getStatement();
     final MutableMetaStore metaStore = (MutableMetaStore) ksqlEngine.getMetaStore();
     final KsqlTable<?> dataSource =
-        (KsqlTable) metaStore.getSource(createMaterializedView.getSource());
+        (KsqlTable) metaStore.getSource(createMaterializedView.getSource().toUpperCase());
     metaStore.putSource(new MaterializedView<>(
         statement.getStatementText(),
         createMaterializedView.getMaterializedViewName().toUpperCase(),
-        dataSource));
+        dataSource.getSchema(),
+        dataSource.getSerdeOptions(),
+        dataSource.getKeyField(),
+        dataSource.getTimestampExtractionPolicy(),
+        dataSource.getKsqlTopic(),
+        dataSource.getKeySerdeFactory()));
     metaStore.putConnector(createMaterializedView.getMaterializedViewName());
   }
 }

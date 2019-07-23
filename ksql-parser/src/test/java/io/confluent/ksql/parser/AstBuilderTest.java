@@ -28,16 +28,7 @@ import io.confluent.ksql.function.FunctionRegistry;
 import io.confluent.ksql.metastore.MetaStore;
 import io.confluent.ksql.parser.KsqlParser.ParsedStatement;
 import io.confluent.ksql.parser.SqlBaseParser.SingleStatementContext;
-import io.confluent.ksql.parser.tree.AliasedRelation;
-import io.confluent.ksql.parser.tree.AllColumns;
-import io.confluent.ksql.parser.tree.DereferenceExpression;
-import io.confluent.ksql.parser.tree.Join;
-import io.confluent.ksql.parser.tree.QualifiedName;
-import io.confluent.ksql.parser.tree.QualifiedNameReference;
-import io.confluent.ksql.parser.tree.Query;
-import io.confluent.ksql.parser.tree.Select;
-import io.confluent.ksql.parser.tree.SingleColumn;
-import io.confluent.ksql.parser.tree.Table;
+import io.confluent.ksql.parser.tree.*;
 import io.confluent.ksql.util.KsqlException;
 import io.confluent.ksql.util.MetaStoreFixture;
 import java.util.List;
@@ -426,6 +417,20 @@ public class AstBuilderTest {
 
     // When:
     builder.build(stmt);
+  }
+
+  @Test
+  public void shouldHandleCreateMaterializedView() {
+    // Given:
+    final SingleStatementContext stmt =
+        givenQuery("CREATE MATERIALIZED VIEW MATVIEW AS SELECT * FROM TEST1;");
+
+    // When:
+    final CreateMaterializedView result = (CreateMaterializedView) builder.build(stmt);
+
+    // Then:
+    assertThat(result.getMaterializedViewName(), is("MATVIEW"));
+    assertThat(result.getSource(), is("TEST1"));
   }
 
   private static SingleStatementContext givenQuery(final String sql) {

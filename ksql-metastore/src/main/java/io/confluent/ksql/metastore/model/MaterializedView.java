@@ -28,22 +28,6 @@ import org.apache.kafka.streams.kstream.WindowedSerdes;
 public class MaterializedView<K> extends StructuredDataSource<K> {
   public MaterializedView(
       final String sqlExpression,
-      final String name,
-      final KsqlTable<K> dataSource) {
-    this(
-        sqlExpression,
-        name,
-        dataSource.getSchema(),
-        dataSource.getSerdeOptions(),
-        dataSource.getKeyField(),
-        dataSource.getTimestampExtractionPolicy(),
-        dataSource.getKsqlTopic(),
-        dataSource.getKeySerdeFactory()
-    );
-  }
-
-  public MaterializedView(
-      final String sqlExpression,
       final String datasourceName,
       final LogicalSchema schema,
       final Set<SerdeOption> serdeOptions,

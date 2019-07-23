@@ -18,8 +18,8 @@ package io.confluent.ksql.rest.entity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import io.confluent.ksql.metastore.model.KsqlTable;
+import io.confluent.ksql.serde.Format;
 import io.confluent.ksql.util.KsqlConfig;
 
 import java.util.HashMap;
@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonSubTypes({})
 public class ConnectRequest {
   private final String name;
   private final Map<String, Object> config;
@@ -36,7 +35,8 @@ public class ConnectRequest {
       final String name,
       final KsqlTable<?> dataSource,
       final KsqlConfig ksqlConfig) {
-    this(name, cassandraConfigBuilder(name, dataSource, ksqlConfig));
+    this.name = name;
+    this.config = cassandraConfigBuilder(name, dataSource, ksqlConfig);
   }
 
   @JsonCreator
@@ -76,7 +76,7 @@ public class ConnectRequest {
     return Objects.hash(name, config);
   }
 
-  private static Map<String, Object> cassandraConfigBuilder(
+  private Map<String, Object> cassandraConfigBuilder(
       final String name,
       final KsqlTable<?> dataSource,
       final KsqlConfig ksqlConfig) {
@@ -94,18 +94,15 @@ public class ConnectRequest {
     config.put("cassandra.contact.points", properties.get(KsqlConfig.CASSANDRA_HOST_PROPERTY));
     config.put("cassandra.port", properties.get(KsqlConfig.CASSANDRA_PORT_PROPERTY));
 
-    switch (dataSource.getValueSerdeFactory().getFormat()) {
-      case JSON:
-        config.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
-        config.put("value.converter.schemas.enable", "false");
-        break;
-      case AVRO:
-        config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("value.converter.schema.registry.url",
-            properties.get(KsqlConfig.SCHEMA_REGISTRY_URL_PROPERTY));
-        break;
-      default:
-        config.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
+    if (dataSource.getValueSerdeFactory().getFormat() == Format.JSON) {
+      config.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+      config.put("value.converter.schemas.enable", "false");
+    } else if (dataSource.getValueSerdeFactory().getFormat() == Format.AVRO) {
+      config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+      config.put("value.converter.schema.registry.url",
+          properties.get(KsqlConfig.SCHEMA_REGISTRY_URL_PROPERTY));
+    } else {
+      config.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
     }
 
     config.put("transforms", "KeyToValueTransform");

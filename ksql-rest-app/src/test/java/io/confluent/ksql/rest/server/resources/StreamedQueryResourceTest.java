@@ -63,10 +63,7 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -130,7 +127,10 @@ public class StreamedQueryResourceTest {
     expect(mockStatementParser.parseSingleStatement(queryString))
         .andReturn(statement);
     replay(mockKsqlEngine, mockStatementParser);
-
+    final Map<String, Object> cassandraProps = new HashMap<>();
+    cassandraProps.put(KsqlConfig.CASSANDRA_HOST_PROPERTY, "localhost");
+    cassandraProps.put(KsqlConfig.CASSANDRA_PORT_PROPERTY, "9042");
+    ksqlConfig = new KsqlConfig(cassandraProps);
     testResource = new StreamedQueryResource(
         ksqlConfig,
         mockKsqlEngine,

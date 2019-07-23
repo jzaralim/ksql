@@ -34,6 +34,8 @@ public interface MetaStore extends FunctionRegistry {
 
   Map<String, KsqlTopic> getAllKsqlTopics();
 
+  List<String> getAllConnectors();
+
   Set<String> getQueriesWithSource(String sourceName);
 
   Set<String> getQueriesWithSink(String sourceName);

@@ -30,13 +30,6 @@ public class CreateMaterializedView extends Statement {
   }
 
   public CreateMaterializedView(
-      final NodeLocation location,
-      final String materializedViewName,
-      final String source) {
-    this(Optional.of(location), materializedViewName, source);
-  }
-
-  public CreateMaterializedView(
       final Optional<NodeLocation> location,
       final String materializedViewName,
       final String source) {

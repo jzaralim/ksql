@@ -33,28 +33,7 @@ import io.confluent.ksql.TestTerminal;
 import io.confluent.ksql.cli.console.Console.NoOpRowCaptor;
 import io.confluent.ksql.cli.console.cmd.CliSpecificCommand;
 import io.confluent.ksql.metastore.model.DataSource.DataSourceType;
-import io.confluent.ksql.rest.entity.ArgumentInfo;
-import io.confluent.ksql.rest.entity.CommandStatus;
-import io.confluent.ksql.rest.entity.CommandStatusEntity;
-import io.confluent.ksql.rest.entity.EntityQueryId;
-import io.confluent.ksql.rest.entity.ExecutionPlan;
-import io.confluent.ksql.rest.entity.FieldInfo;
-import io.confluent.ksql.rest.entity.FunctionDescriptionList;
-import io.confluent.ksql.rest.entity.FunctionInfo;
-import io.confluent.ksql.rest.entity.FunctionType;
-import io.confluent.ksql.rest.entity.KsqlEntityList;
-import io.confluent.ksql.rest.entity.KsqlTopicInfo;
-import io.confluent.ksql.rest.entity.KsqlTopicsList;
-import io.confluent.ksql.rest.entity.PropertiesList;
-import io.confluent.ksql.rest.entity.Queries;
-import io.confluent.ksql.rest.entity.RunningQuery;
-import io.confluent.ksql.rest.entity.SourceDescription;
-import io.confluent.ksql.rest.entity.SourceDescriptionEntity;
-import io.confluent.ksql.rest.entity.SourceInfo;
-import io.confluent.ksql.rest.entity.StreamedRow;
-import io.confluent.ksql.rest.entity.StreamsList;
-import io.confluent.ksql.rest.entity.TablesList;
-import io.confluent.ksql.rest.entity.TopicDescription;
+import io.confluent.ksql.rest.entity.*;
 import io.confluent.ksql.rest.server.computation.CommandId;
 import io.confluent.ksql.rest.util.EntityUtil;
 import io.confluent.ksql.schema.ksql.LogicalSchema;
@@ -870,6 +849,30 @@ public class ConsoleTest {
           + "                \tContaining Tabs\n"
           + "                and stuff";
 
+      assertThat(output, containsString(expected));
+    }
+  }
+
+  @Test
+  public void shouldPrintMaterializedCreatedMessage() throws IOException {
+    final KsqlEntityList entityList = new KsqlEntityList(ImmutableList.of(
+        new ConnectorEntity("", new ConnectorInfo("foo", null, null))));
+
+    console.printKsqlEntityList(entityList);
+
+    final String output = terminal.getOutputString();
+    if (console.getOutputFormat() == OutputFormat.JSON) {
+      assertThat(output, is("[ {\n"
+          + "  \"@type\" : \"connectorInfo\",\n"
+          + "  \"statementText\" : \"\",\n"
+          + "  \"connectorInfo\" : {\n"
+          + "    \"name\" : \"foo\",\n"
+          + "    \"config\" : null,\n"
+          + "    \"tasks\" : null\n"
+          + "  }\n"
+          + "} ]\n"));
+    } else {
+      final String expected = "Materialized view foo has been created";
       assertThat(output, containsString(expected));
     }
   }

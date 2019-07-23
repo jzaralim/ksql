@@ -102,6 +102,9 @@ public final class MetaStoreImpl implements MutableMetaStore {
 
   @Override
   public void putConnector(final String connector) {
+    if (connectors.contains(connector)) {
+      throw new KsqlException(String.format("Connector %s already exists.", connector));
+    }
     connectors.add(connector);
   }
 
@@ -146,7 +149,14 @@ public final class MetaStoreImpl implements MutableMetaStore {
 
   @Override
   public void removeConnector(final String connector) {
-    connectors.remove(connector);
+    if (!connectors.remove(connector)) {
+      throw new KsqlException(String.format("No connector named %s registered.", connector));
+    }
+  }
+
+  @Override
+  public List<String> getAllConnectors() {
+    return connectors.stream().collect(Collectors.toList());
   }
 
   @Override

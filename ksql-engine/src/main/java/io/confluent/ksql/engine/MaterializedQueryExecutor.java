@@ -20,6 +20,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.cql.Row;
+import com.google.common.annotations.VisibleForTesting;
 import io.confluent.ksql.GenericRow;
 import io.confluent.ksql.metastore.MetaStore;
 import io.confluent.ksql.metastore.model.DataSource;
@@ -28,7 +29,6 @@ import io.confluent.ksql.parser.tree.AliasedRelation;
 import io.confluent.ksql.parser.tree.Query;
 import io.confluent.ksql.parser.tree.SelectItem;
 import io.confluent.ksql.parser.tree.SingleColumn;
-import io.confluent.ksql.util.KsqlException;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -42,11 +42,17 @@ public class MaterializedQueryExecutor {
   private final MetaStore metaStore;
 
   public MaterializedQueryExecutor(final String host, final int port, final MetaStore metaStore) {
-    this.metaStore = metaStore;
-    session = CqlSession.builder()
+    this(CqlSession
+        .builder()
         .addContactPoint(new InetSocketAddress(host, port))
         .withLocalDatacenter("datacenter1")
-        .build();
+        .build(), metaStore);
+  }
+
+  @VisibleForTesting
+  MaterializedQueryExecutor(final CqlSession session, final MetaStore metaStore) {
+    this.session = session;
+    this.metaStore = metaStore;
   }
 
   public List<GenericRow> executeQuery(
@@ -57,9 +63,6 @@ public class MaterializedQueryExecutor {
     final List<SelectItem> selectItemList = query.getSelect().getSelectItems();
     final ResultSet rows = session
         .execute(getCassandraQuery(statement, query));
-    if (rows == null) {
-      throw new KsqlException("No results for query.");
-    }
 
     final List<GenericRow> results = new ArrayList<>();
 
@@ -78,13 +81,18 @@ public class MaterializedQueryExecutor {
         }
       }
       if (((MaterializedView) dataSource).isWindowed()) {
-        final Windowed windowedKey = (Windowed) dataSource
-            .getKeySerdeFactory()
-            .create()
-            .deserializer()
-            .deserialize(dataSource.getKafkaTopicName(), row.getString("rowkey").getBytes(UTF_8));
-        columns.add(windowedKey.window().startTime().getEpochSecond());
-        columns.add(windowedKey.window().endTime().getEpochSecond());
+        try {
+          final Windowed windowedKey = (Windowed) dataSource
+              .getKeySerdeFactory()
+              .create()
+              .deserializer()
+              .deserialize(dataSource.getKafkaTopicName(), row.getString("rowkey").getBytes(UTF_8));
+          columns.add(windowedKey.window().startTime().getEpochSecond());
+          columns.add(windowedKey.window().endTime().getEpochSecond());
+        } catch (Exception e) {
+          columns.add(0);
+          columns.add(0);
+        }
       }
       results.add(new GenericRow(columns));
     }
@@ -98,8 +106,9 @@ public class MaterializedQueryExecutor {
     final String postWhere;
 
     if (query.getWhere().isPresent()) {
-      preWhere = statement.substring(0, statement.indexOf("WHERE")).toUpperCase();
-      postWhere = statement.substring(statement.indexOf("WHERE")).replace(";", " ALLOW FILTERING;");
+      final int whereIndex = statement.toUpperCase().indexOf("WHERE");
+      preWhere = statement.substring(0, whereIndex).toUpperCase();
+      postWhere = statement.substring(whereIndex).replace(";", " ALLOW FILTERING;");
     } else {
       preWhere = statement.toUpperCase();
       postWhere = "";

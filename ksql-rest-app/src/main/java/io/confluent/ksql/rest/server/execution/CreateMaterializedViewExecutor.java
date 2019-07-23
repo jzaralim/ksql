@@ -15,6 +15,7 @@
 
 package io.confluent.ksql.rest.server.execution;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.confluent.ksql.KsqlExecutionContext;
 import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.metastore.model.KsqlTable;
@@ -28,6 +29,7 @@ import io.confluent.ksql.rest.entity.KsqlEntity;
 import io.confluent.ksql.services.ServiceContext;
 import io.confluent.ksql.statement.ConfiguredStatement;
 import io.confluent.ksql.util.KsqlConfig;
+import io.confluent.ksql.util.KsqlException;
 
 import java.util.Optional;
 
@@ -41,23 +43,37 @@ public final class CreateMaterializedViewExecutor {
       final KsqlExecutionContext executionContext,
       final ServiceContext serviceContext) {
     final KsqlConfig config = statement.getConfig();
+    return execute(getConnectClient(config), statement, executionContext);
+  }
+
+  public static Optional<KsqlEntity> execute(
+      final KsqlConnectClient client,
+      final ConfiguredStatement<?> statement,
+      final KsqlExecutionContext executionContext) {
+    final KsqlConfig config = statement.getConfig();
     final DataSource<?> dataSource = executionContext
         .getMetaStore()
-        .getSource(statement.getStatement().getSource());
+        .getSource(((CreateMaterializedView) statement.getStatement()).getSource());
+
     if (!(dataSource instanceof KsqlTable)) {
-      return Optional.empty();
+      throw new KsqlException("Materialized views are only supported for tables.");
     }
+
     final ConnectRequest request = new ConnectRequest(
-        statement.getStatement().getMaterializedViewName(),
-        (KsqlTable) dataSource,
-        config);
-    final KsqlConnectClient client =
-        new KsqlConnectClient(
-            config
-            .getAllConfigPropsWithSecretsObfuscated()
-            .get(KsqlConfig.CONNECT_URL_PROPERTY)
-        );
+        ((CreateMaterializedView) statement.getStatement()).getMaterializedViewName(),
+        (KsqlTable<?>) dataSource,
+        config
+    );
     final RestResponse<ConnectorInfo> response = client.createNewConnector(request);
     return Optional.of(new ConnectorEntity(statement.getStatementText(), response.getResponse()));
+  }
+
+  @VisibleForTesting
+  static KsqlConnectClient getConnectClient(final KsqlConfig config) {
+    return new KsqlConnectClient(
+        config
+            .getAllConfigPropsWithSecretsObfuscated()
+            .get(KsqlConfig.CONNECT_URL_PROPERTY)
+    );
   }
 }

@@ -27,8 +27,7 @@ import static org.easymock.EasyMock.verify;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.*;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -40,7 +39,11 @@ import io.confluent.ksql.function.InternalFunctionRegistry;
 import io.confluent.ksql.integration.Retry;
 import io.confluent.ksql.metastore.MetaStore;
 import io.confluent.ksql.metastore.MetaStoreImpl;
+import io.confluent.ksql.metastore.MutableMetaStore;
 import io.confluent.ksql.metastore.model.DataSource;
+import io.confluent.ksql.metastore.model.KeyField;
+import io.confluent.ksql.metastore.model.KsqlTable;
+import io.confluent.ksql.metastore.model.KsqlTopic;
 import io.confluent.ksql.parser.KsqlParser.ParsedStatement;
 import io.confluent.ksql.parser.KsqlParser.PreparedStatement;
 import io.confluent.ksql.parser.SqlBaseParser.SingleStatementContext;
@@ -57,6 +60,10 @@ import io.confluent.ksql.rest.server.StatementParser;
 import io.confluent.ksql.rest.server.computation.CommandId.Action;
 import io.confluent.ksql.rest.server.computation.CommandId.Type;
 import io.confluent.ksql.rest.server.utils.TestUtils;
+import io.confluent.ksql.schema.ksql.LogicalSchema;
+import io.confluent.ksql.serde.SerdeOption;
+import io.confluent.ksql.serde.SerdeOptions;
+import io.confluent.ksql.serde.json.KsqlJsonSerdeFactory;
 import io.confluent.ksql.services.FakeKafkaTopicClient;
 import io.confluent.ksql.services.ServiceContext;
 import io.confluent.ksql.services.TestServiceContext;
@@ -71,7 +78,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
+
+import io.confluent.ksql.util.timestamp.MetadataTimestampExtractionPolicy;
 import kafka.zookeeper.ZooKeeperClientException;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
 import org.easymock.EasyMockSupport;
 import org.easymock.IArgumentMatcher;
 import org.hamcrest.CoreMatchers;
@@ -629,6 +641,31 @@ public class StatementExecutorTest extends EasyMockSupport {
 
     // Then:
     verify(mockParser, mockEngine, mockQuery);
+  }
+
+  @Test
+  public void shouldAddMaterializedViewToMetaStore() {
+    final LogicalSchema schema = LogicalSchema.of(SchemaBuilder.struct().field("val", Schema.OPTIONAL_STRING_SCHEMA).build());
+    ((MutableMetaStore) ksqlEngine.getMetaStore()).putSource(
+        new KsqlTable<>(
+            "",
+            "BAR",
+            schema,
+            SerdeOption.none(),
+            KeyField.of("val", schema.valueSchema().field("val")),
+            new MetadataTimestampExtractionPolicy(),
+            new KsqlTopic("foo", "foo", new KsqlJsonSerdeFactory(), false),
+            Serdes::String
+            ));
+    handleStatement(
+        givenCommand("CREATE MATERIALIZED VIEW FOO AS SELECT * FROM BAR;", ksqlConfig),
+        new CommandId(Type.MATERIALIZED_VIEW, "foo", CommandId.Action.EXECUTE),
+        Optional.empty()
+    );
+
+    assertThat(ksqlEngine.getMetaStore().getAllConnectors().size(), is(1));
+    assertThat(ksqlEngine.getMetaStore().getAllConnectors(), hasItem("FOO"));
+    assertThat(ksqlEngine.getMetaStore().getAllDataSources(), hasKey("FOO"));
   }
 
   private void createStreamsAndStartTwoPersistentQueries() {

@@ -97,7 +97,7 @@ public class MetaStoreTest {
     final List<DataSource<?>> sources = metaStore.getSourcesForKafkaTopic("test2");
 
     // Then:
-    assertThat(sources, hasSize(1));
+    assertThat(sources, hasSize(2));
     final DataSource<?> source = sources.get(0);
     assertThat(source, instanceOf(KsqlTable.class));
     assertThat(source.getDataSourceType(), equalTo(DataSourceType.KTABLE));

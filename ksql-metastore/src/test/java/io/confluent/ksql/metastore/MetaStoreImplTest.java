@@ -16,10 +16,7 @@
 package io.confluent.ksql.metastore;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -344,6 +341,28 @@ public class MetaStoreImplTest {
 
     // Then:
     assertThat(metaStore.getQueriesWithSink(dataSource.getName()), contains("some query"));
+  }
+
+  @Test
+  public void shouldAddAndRemoveConnectors() {
+    metaStore.putConnector("foo");
+    metaStore.putConnector("bar");
+    assertThat(metaStore.getAllConnectors().size(), is(2));
+    assertThat(metaStore.getAllConnectors(), hasItem("foo"));
+    assertThat(metaStore.getAllConnectors(), hasItem("bar"));
+    metaStore.removeConnector("foo");
+    assertThat(metaStore.getAllConnectors().size(), is(1));
+    assertThat(metaStore.getAllConnectors(), hasItem("bar"));
+    try {
+      metaStore.removeConnector("foo");
+    } catch (final KsqlException e) {
+      assertThat(e.getMessage(), equalTo("No connector named foo registered."));
+    }
+    try {
+      metaStore.putConnector("bar");
+    } catch (final KsqlException e) {
+      assertThat(e.getMessage(), equalTo("Connector bar already exists."));
+    }
   }
 
   @Test

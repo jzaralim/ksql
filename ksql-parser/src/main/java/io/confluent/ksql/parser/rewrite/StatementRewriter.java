@@ -22,7 +22,6 @@ import io.confluent.ksql.parser.tree.ArithmeticUnaryExpression;
 import io.confluent.ksql.parser.tree.BetweenPredicate;
 import io.confluent.ksql.parser.tree.Cast;
 import io.confluent.ksql.parser.tree.ComparisonExpression;
-import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.CreateStream;
 import io.confluent.ksql.parser.tree.CreateStreamAsSelect;
 import io.confluent.ksql.parser.tree.CreateTable;
@@ -432,15 +431,6 @@ public class StatementRewriter extends DefaultAstVisitor<Node, Object> {
                 Entry::getKey,
                 e -> (Literal) process(e.getValue(), context)
             )));
-  }
-
-  protected Node visitCreateMaterializedView(
-      final CreateMaterializedView node,
-      final Object context) {
-    return new CreateMaterializedView(
-        node.getLocation(),
-        node.getMaterializedViewName(),
-        node.getSource());
   }
 
   protected Node visitInsertInto(final InsertInto node, final Object context) {

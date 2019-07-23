@@ -1312,7 +1312,7 @@ public class KsqlResourceTest {
   public void shouldListDefaultKsqlProperty() {
     // Given:
     givenKsqlConfigWith(ImmutableMap.<String, Object>builder()
-        .put(StreamsConfig.STATE_DIR_CONFIG, "/var/lib/kafka-streams")
+        .put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-streams")
         .build());
 
     // When:

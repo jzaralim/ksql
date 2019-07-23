@@ -18,10 +18,7 @@ package io.confluent.ksql.util;
 import io.confluent.ksql.function.FunctionRegistry;
 import io.confluent.ksql.metastore.MetaStoreImpl;
 import io.confluent.ksql.metastore.MutableMetaStore;
-import io.confluent.ksql.metastore.model.KeyField;
-import io.confluent.ksql.metastore.model.KsqlStream;
-import io.confluent.ksql.metastore.model.KsqlTable;
-import io.confluent.ksql.metastore.model.KsqlTopic;
+import io.confluent.ksql.metastore.model.*;
 import io.confluent.ksql.schema.ksql.LogicalSchema;
 import io.confluent.ksql.serde.KsqlSerdeFactory;
 import io.confluent.ksql.serde.SerdeOption;
@@ -233,6 +230,16 @@ public final class MetaStoreFixture {
 
     metaStore.putTopic(ksqlTopic4);
     metaStore.putSource(ksqlStream4);
+
+    metaStore.putSource(new MaterializedView<>(
+        "CREATE MATERIALIZED VIEW MATVIEW AS SELECT * FROM TEST2",
+        "MATVIEW",
+        LogicalSchema.of(test2Schema),
+        SerdeOption.none(),
+        KeyField.of("COL0", test2Schema.field("COL0")),
+        timestampExtractionPolicy,
+        ksqlTopic2,
+        Serdes::String));
 
     return metaStore;
   }

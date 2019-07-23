@@ -182,7 +182,8 @@ public class StreamedQueryResource {
         statement.getStatement()
     );
 
-    if (ksqlEngine
+    if (statement.getStatement().getFrom() != null
+        && ksqlEngine
         .getMetaStore()
         .getSource(((AliasedRelation) statement.getStatement().getFrom()).getAlias())
         .getDataSourceType() == DataSourceType.MATERIALIZED) {
