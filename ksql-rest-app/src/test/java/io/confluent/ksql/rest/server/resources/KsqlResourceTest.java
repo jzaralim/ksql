@@ -74,12 +74,14 @@ import io.confluent.ksql.metastore.model.KsqlStream;
 import io.confluent.ksql.metastore.model.KsqlTable;
 import io.confluent.ksql.metastore.model.KsqlTopic;
 import io.confluent.ksql.parser.KsqlParser.PreparedStatement;
+import io.confluent.ksql.parser.properties.with.CreateSourceProperties;
 import io.confluent.ksql.parser.tree.CreateStream;
 import io.confluent.ksql.parser.tree.CreateStreamAsSelect;
 import io.confluent.ksql.parser.tree.QualifiedName;
 import io.confluent.ksql.parser.tree.Statement;
 import io.confluent.ksql.parser.tree.StringLiteral;
 import io.confluent.ksql.parser.tree.TableElement;
+import io.confluent.ksql.parser.tree.TableElement.Namespace;
 import io.confluent.ksql.parser.tree.TableElements;
 import io.confluent.ksql.parser.tree.TerminateQuery;
 import io.confluent.ksql.rest.entity.ClusterTerminateRequest;
@@ -143,12 +145,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.ws.rs.core.Response;
 import org.apache.avro.Schema.Type;
+import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serdes;
@@ -186,7 +190,7 @@ public class KsqlResourceTest {
   private static final ClusterTerminateRequest VALID_TERMINATE_REQUEST =
       new ClusterTerminateRequest(ImmutableList.of("Foo"));
   private static final TableElements SOME_ELEMENTS = TableElements.of(
-      new TableElement("f0", new io.confluent.ksql.parser.tree.Type(SqlTypes.STRING))
+      new TableElement(Namespace.VALUE, "f0", new io.confluent.ksql.parser.tree.Type(SqlTypes.STRING))
   );
   private static final PreparedStatement<CreateStream> STMT_0_WITH_SCHEMA = PreparedStatement.of(
       "sql with schema",
@@ -194,10 +198,10 @@ public class KsqlResourceTest {
           QualifiedName.of("bob"),
           SOME_ELEMENTS,
           true,
-          ImmutableMap.of(
+          CreateSourceProperties.from(ImmutableMap.of(
               "KAFKA_TOPIC", new StringLiteral("orders-topic"),
               "VALUE_FORMAT", new StringLiteral("avro")
-          )));
+          ))));
   private static final ConfiguredStatement<CreateStream> CFG_0_WITH_SCHEMA = ConfiguredStatement.of(
       STMT_0_WITH_SCHEMA,
       ImmutableMap.of(),
@@ -210,10 +214,10 @@ public class KsqlResourceTest {
           QualifiedName.of("john"),
           SOME_ELEMENTS,
           true,
-          ImmutableMap.of(
+          CreateSourceProperties.from(ImmutableMap.of(
               "KAFKA_TOPIC", new StringLiteral("orders-topic"),
               "VALUE_FORMAT", new StringLiteral("avro")
-          )));
+          ))));
   private static final ConfiguredStatement<CreateStream> CFG_1_WITH_SCHEMA = ConfiguredStatement.of(
       STMT_1_WITH_SCHEMA,
       ImmutableMap.of(),
@@ -370,11 +374,12 @@ public class KsqlResourceTest {
         new SourceDescription(
             ksqlEngine.getMetaStore().getSource("TEST_STREAM"),
             true, "JSON", Collections.emptyList(), Collections.emptyList(),
-            kafkaTopicClient),
+            Optional.of(kafkaTopicClient.describeTopic("KAFKA_TOPIC_2"))),
         new SourceDescription(
             ksqlEngine.getMetaStore().getSource("new_stream"),
             true, "JSON", Collections.emptyList(), Collections.emptyList(),
-            kafkaTopicClient)));
+            Optional.of(kafkaTopicClient.describeTopic("new_topic"))))
+    );
   }
 
   @Test
@@ -398,11 +403,12 @@ public class KsqlResourceTest {
         new SourceDescription(
             ksqlEngine.getMetaStore().getSource("TEST_TABLE"),
             true, "JSON", Collections.emptyList(), Collections.emptyList(),
-            kafkaTopicClient),
+            Optional.of(kafkaTopicClient.describeTopic("KAFKA_TOPIC_1"))),
         new SourceDescription(
             ksqlEngine.getMetaStore().getSource("new_table"),
             true, "JSON", Collections.emptyList(), Collections.emptyList(),
-            kafkaTopicClient)));
+            Optional.of(kafkaTopicClient.describeTopic("new_topic"))))
+    );
   }
 
   @Test
@@ -439,8 +445,13 @@ public class KsqlResourceTest {
 
     // Then:
     final SourceDescription expectedDescription = new SourceDescription(
-        ksqlEngine.getMetaStore().getSource("DESCRIBED_STREAM"), false, "JSON",
-        Collections.singletonList(queries.get(1)), Collections.singletonList(queries.get(0)), null);
+        ksqlEngine.getMetaStore().getSource("DESCRIBED_STREAM"),
+        false,
+        "JSON",
+        Collections.singletonList(queries.get(1)),
+        Collections.singletonList(queries.get(0)),
+        Optional.empty()
+    );
 
     assertThat(description.getSourceDescription(), is(expectedDescription));
   }
@@ -1320,7 +1331,7 @@ public class KsqlResourceTest {
 
     // Then:
     assertThat(props.getDefaultProperties(),
-        hasItem(KsqlConfig.KSQL_STREAMS_PREFIX + StreamsConfig.STATE_DIR_CONFIG));
+               hasItem(KsqlConfig.KSQL_STREAMS_PREFIX + StreamsConfig.STATE_DIR_CONFIG));
   }
 
   @Test
@@ -1553,7 +1564,7 @@ public class KsqlResourceTest {
   public void shouldNeverEnqueueIfErrorIsThrown() {
     // Given:
     givenMockEngine();
-    when(ksqlEngine.getMetaStore()).thenThrow(new KsqlException("Fail"));
+    when(ksqlEngine.parse(anyString())).thenThrow(new KsqlException("Fail"));
 
     // When:
     makeFailingRequest(
@@ -1574,7 +1585,7 @@ public class KsqlResourceTest {
     expectedException.expect(KsqlRestException.class);
     expectedException.expect(exceptionStatusCode(is(Code.BAD_REQUEST)));
     expectedException.expect(exceptionErrorMessage(
-        errorMessage(containsString("Source already exists: SOURCE"))));
+        errorMessage(containsString("Cannot add stream 'SOURCE': A stream with the same name already exists"))));
 
     // When:
     final String createSql =
@@ -1592,7 +1603,7 @@ public class KsqlResourceTest {
     expectedException.expect(KsqlRestException.class);
     expectedException.expect(exceptionStatusCode(is(Code.BAD_REQUEST)));
     expectedException.expect(exceptionErrorMessage(
-        errorMessage(containsString("Source already exists: SOURCE"))));
+        errorMessage(containsString("Cannot add table 'SOURCE': A table with the same name already exists"))));
 
     // When:
     final String createSql =
@@ -1605,15 +1616,14 @@ public class KsqlResourceTest {
   public void shouldFailIfCreateAsSelectExistingSourceStream() {
     // Given:
     givenSource(DataSourceType.KSTREAM, "SOURCE", "topic1", "ksqlTopic1", SINGLE_FIELD_SCHEMA);
-    givenSource(DataSourceType.KSTREAM, "SINK", "topic2", "ksqlTopic2", SINGLE_FIELD_SCHEMA);
+    givenSource(DataSourceType.KTABLE, "SINK", "topic2", "ksqlTopic2", SINGLE_FIELD_SCHEMA);
 
     // Then:
     expectedException.expect(KsqlRestException.class);
     expectedException.expect(exceptionStatusCode(is(Code.BAD_REQUEST)));
     expectedException.expect(exceptionErrorMessage(
         errorMessage(containsString(
-            "Cannot add the new data source. Another data source with the "
-                + "same name already exists: KsqlStream name:SINK"))));
+            "Cannot add stream 'SINK': A table with the same name already exists"))));
 
     // When:
     final String createSql =
@@ -1625,15 +1635,14 @@ public class KsqlResourceTest {
   public void shouldFailIfCreateAsSelectExistingSourceTable() {
     // Given:
     givenSource(DataSourceType.KTABLE, "SOURCE", "topic1", "ksqlTopic1", SINGLE_FIELD_SCHEMA);
-    givenSource(DataSourceType.KTABLE, "SINK", "topic2", "ksqlTopic2", SINGLE_FIELD_SCHEMA);
+    givenSource(DataSourceType.KSTREAM, "SINK", "topic2", "ksqlTopic2", SINGLE_FIELD_SCHEMA);
 
     // Then:
     expectedException.expect(KsqlRestException.class);
     expectedException.expect(exceptionStatusCode(is(Code.BAD_REQUEST)));
     expectedException.expect(exceptionErrorMessage(
         errorMessage(containsString(
-            "Cannot add the new data source. Another data source with the "
-                + "same name already exists: KsqlTable name:SINK"))));
+            "Cannot add table 'SINK': A stream with the same name already exists"))));
 
     // When:
     final String createSql =
@@ -1908,17 +1917,12 @@ public class KsqlResourceTest {
       final String ksqlTopicName,
       final LogicalSchema schema
   ) {
-    if (metaStore.getTopic(ksqlTopicName) != null) {
-      return;
-    }
-
     final KsqlTopic ksqlTopic = new KsqlTopic(
         ksqlTopicName,
         topicName,
         new KsqlJsonSerdeFactory(),
         false);
     givenKafkaTopicExists(topicName);
-    metaStore.putTopic(ksqlTopic);
     if (type == DataSourceType.KSTREAM) {
       metaStore.putSource(
           new KsqlStream<>(
@@ -1993,10 +1997,6 @@ public class KsqlResourceTest {
 
   private void givenKafkaTopicExists(final String name) {
     kafkaTopicClient.preconditionTopicExists(name, 1, (short) 1, emptyMap());
-  }
-
-  private void givenKsqlTopicRegistered(final String name) {
-    metaStore.putTopic(new KsqlTopic(name.toUpperCase(), name, new KsqlJsonSerdeFactory(), true));
   }
 
   private void givenPersistentQueryCount(final int value) {

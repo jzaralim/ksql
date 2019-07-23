@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.confluent.ksql.function.FunctionRegistry;
 import io.confluent.ksql.metastore.model.DataSource;
-import io.confluent.ksql.metastore.model.KsqlTopic;
+import io.confluent.ksql.metastore.model.DataSource.DataSourceType;
 import io.confluent.ksql.util.KsqlException;
 import io.confluent.ksql.util.KsqlReferentialIntegrityException;
 import java.util.Map;
@@ -54,8 +54,6 @@ public class MetaStoreImplTest {
   @Mock
   private FunctionRegistry functionRegistry;
   @Mock
-  private KsqlTopic topic;
-  @Mock
   private DataSource<?> dataSource;
   @Mock
   private DataSource<?> dataSource1;
@@ -66,8 +64,8 @@ public class MetaStoreImplTest {
   public void setUp() {
     metaStore = new MetaStoreImpl(functionRegistry);
 
-    when(topic.getKsqlTopicName()).thenReturn("some registered topic");
     when(dataSource.getName()).thenReturn("some source");
+    when(dataSource.getDataSourceType()).thenReturn(DataSourceType.KTABLE);
     when(dataSource1.getName()).thenReturn("some other source");
 
     executor = Executors.newSingleThreadExecutor();
@@ -77,20 +75,6 @@ public class MetaStoreImplTest {
   public void tearDown() throws Exception {
     executor.shutdownNow();
     executor.awaitTermination(1, TimeUnit.MINUTES);
-  }
-
-  @Test
-  public void shouldDeepCopyTopicsOnCopy() {
-    // Given:
-    metaStore.putTopic(topic);
-
-    // When:
-    final MetaStore copy = metaStore.copy();
-    metaStore.deleteTopic(topic.getKsqlTopicName());
-
-    // Then:
-    assertThat(copy.getAllKsqlTopics().keySet(), contains(topic.getKsqlTopicName()));
-    assertThat(metaStore.getAllKsqlTopics().keySet(), is(empty()));
   }
 
   @Test
@@ -150,50 +134,14 @@ public class MetaStoreImplTest {
   }
 
   @Test
-  public void shouldNotAllowModificationViaGetAllKsqlTopics() {
-    // Given:
-    metaStore.putTopic(topic);
-
-    final Map<String, KsqlTopic> topics = metaStore.getAllKsqlTopics();
-
-    // Expect:
-    expectedException.expect(UnsupportedOperationException.class);
-
-    // When
-    topics.keySet().clear();
-  }
-
-  @Test
-  public void shouldThrowOnDuplicateTopic() {
-    // Given:
-    metaStore.putTopic(topic);
-
-    // Then:
-    expectedException.expect(KsqlException.class);
-    expectedException.expectMessage("Another topic with the same name already exists");
-
-    // When:
-    metaStore.putTopic(topic);
-  }
-
-  @Test
-  public void shouldThrowOnRemoveUnknownTopic() {
-    // Then:
-    expectedException.expect(KsqlException.class);
-    expectedException.expectMessage("No topic with name bob was registered");
-
-    // When:
-    metaStore.deleteTopic("bob");
-  }
-
-  @Test
   public void shouldThrowOnDuplicateSource() {
     // Given:
     metaStore.putSource(dataSource);
 
     // Then:
     expectedException.expect(KsqlException.class);
-    expectedException.expectMessage("Another data source with the same name already exists");
+    expectedException
+        .expectMessage("Cannot add table 'some source': A table with the same name already exists");
 
     // When:
     metaStore.putSource(dataSource);
@@ -370,11 +318,6 @@ public class MetaStoreImplTest {
     IntStream.range(0, 1_000)
         .parallel()
         .forEach(idx -> {
-          final KsqlTopic topic = mock(KsqlTopic.class);
-          when(topic.getKsqlTopicName()).thenReturn("topic" + idx);
-          metaStore.putTopic(topic);
-          metaStore.getTopic(topic.getKsqlTopicName());
-
           final DataSource<?> source = mock(DataSource.class);
           when(source.getName()).thenReturn("source" + idx);
           metaStore.putSource(source);
@@ -394,11 +337,9 @@ public class MetaStoreImplTest {
           metaStore.copy();
 
           metaStore.removePersistentQuery(queryId);
-          metaStore.deleteTopic(topic.getKsqlTopicName());
           metaStore.deleteSource(source.getName());
         });
 
-    assertThat(metaStore.getAllKsqlTopics().keySet(), is(empty()));
     assertThat(metaStore.getAllDataSources().keySet(), is(empty()));
   }
 

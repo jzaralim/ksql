@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableSet;
 import io.confluent.ksql.analyzer.Analysis.AliasedDataSource;
 import io.confluent.ksql.analyzer.Analysis.Into;
 import io.confluent.ksql.analyzer.Analysis.JoinInfo;
-import io.confluent.ksql.ddl.DdlConfig;
 import io.confluent.ksql.metastore.MetaStore;
 import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.metastore.model.KsqlTopic;
@@ -37,7 +36,6 @@ import io.confluent.ksql.parser.tree.GroupBy;
 import io.confluent.ksql.parser.tree.GroupingElement;
 import io.confluent.ksql.parser.tree.Join;
 import io.confluent.ksql.parser.tree.JoinOn;
-import io.confluent.ksql.parser.tree.Literal;
 import io.confluent.ksql.parser.tree.Node;
 import io.confluent.ksql.parser.tree.NodeLocation;
 import io.confluent.ksql.parser.tree.QualifiedName;
@@ -47,7 +45,6 @@ import io.confluent.ksql.parser.tree.Select;
 import io.confluent.ksql.parser.tree.SelectItem;
 import io.confluent.ksql.parser.tree.SingleColumn;
 import io.confluent.ksql.parser.tree.Sink;
-import io.confluent.ksql.parser.tree.StringLiteral;
 import io.confluent.ksql.parser.tree.Table;
 import io.confluent.ksql.parser.tree.WindowExpression;
 import io.confluent.ksql.planner.plan.JoinNode;
@@ -58,16 +55,14 @@ import io.confluent.ksql.serde.KsqlSerdeFactory;
 import io.confluent.ksql.serde.SerdeFactories;
 import io.confluent.ksql.serde.SerdeOption;
 import io.confluent.ksql.serde.SerdeOptions;
-import io.confluent.ksql.util.KsqlConstants;
 import io.confluent.ksql.util.KsqlException;
 import io.confluent.ksql.util.SchemaUtil;
-import io.confluent.ksql.util.StringUtil;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.connect.data.Field;
 
@@ -75,17 +70,21 @@ import org.apache.kafka.connect.data.Field;
 class Analyzer {
   // CHECKSTYLE_RULES.ON: ClassDataAbstractionCoupling
 
-  private static final Set<String> VALID_WITH_PROPS = ImmutableSet.<String>builder()
-      .add(DdlConfig.VALUE_FORMAT_PROPERTY.toUpperCase())
-      .add(DdlConfig.KAFKA_TOPIC_NAME_PROPERTY.toUpperCase())
-      .add(DdlConfig.PARTITION_BY_PROPERTY.toUpperCase())
-      .add(KsqlConstants.SINK_TIMESTAMP_COLUMN_NAME.toUpperCase())
-      .add(KsqlConstants.SINK_NUMBER_OF_PARTITIONS.toUpperCase())
-      .add(KsqlConstants.SINK_NUMBER_OF_REPLICAS.toUpperCase())
-      .add(DdlConfig.TIMESTAMP_FORMAT_PROPERTY.toUpperCase())
-      .add(DdlConfig.VALUE_AVRO_SCHEMA_FULL_NAME.toUpperCase())
-      .add(DdlConfig.WRAP_SINGLE_VALUE.toUpperCase())
-      .build();
+  private static final String KAFKA_VALUE_FORMAT_LIMITATION_DETAILS = ""
+      + "The KAFKA format is primarily intended for use as a key format. "
+      + "It can be used as a value format, but can not be used in any operation that "
+      + "requires a repartition or changelog topic." + System.lineSeparator()
+      + "Removing this limitation requires enhancements to the core of KSQL. "
+      + "This will come in a future release. Until then, avoid using the KAFKA format for values."
+      + System.lineSeparator() + "If you have an existing topic with "
+      + "KAFKA formatted values you can duplicate the data and serialize using Avro or JSON with a "
+      + "statement such as: "
+      + System.lineSeparator()
+      + System.lineSeparator()
+      + "'CREATE STREAM <new-stream-name> WITH(VALUE_FORMAT='Avro') AS "
+      + "SELECT * FROM <existing-kafka-formated-stream-name>;'"
+      + System.lineSeparator()
+      + "For more info see https://github.com/confluentinc/ksql/issues/3060";
 
   private final MetaStore metaStore;
   private final String topicPrefix;
@@ -145,6 +144,8 @@ class Analyzer {
 
     visitor.analyzeSink(sink, sqlExpression);
 
+    visitor.validate();
+
     return visitor.analysis;
   }
 
@@ -153,7 +154,8 @@ class Analyzer {
     // CHECKSTYLE_RULES.ON: ClassDataAbstractionCoupling
 
     private final Analysis analysis = new Analysis();
-    private Optional<String> intoKafkaTopicName = Optional.empty();
+    private boolean isJoin = false;
+    private boolean isGroupBy = false;
 
     private void analyzeSink(
         final Optional<Sink> sink,
@@ -162,46 +164,19 @@ class Analyzer {
       sink.ifPresent(s -> analyzeNonStdOutSink(s, sqlExpression));
     }
 
-    private void setIntoProperties(final Sink sink) {
-      validateWithClause(sink.getProperties().keySet());
-
-      setIntoTopicName(sink.getProperties());
-
-      setPartitionBy(sink.getProperties());
-
-      setIntoTimestampColumnAndFormat(sink.getProperties());
-
-      setSerdeOptions(sink);
-    }
-
-    private void setPartitionBy(final Map<String, Expression> properties) {
-      if (properties.get(DdlConfig.PARTITION_BY_PROPERTY) == null) {
-        return;
-      }
-
-      final String intoPartitionByColumnName = properties
-          .get(DdlConfig.PARTITION_BY_PROPERTY)
-          .toString()
-          .toUpperCase();
-
-      analysis.setPartitionBy(intoPartitionByColumnName);
-    }
-
     private void analyzeNonStdOutSink(
         final Sink sink,
         final String sqlExpression
     ) {
-      setIntoProperties(sink);
+      analysis.setProperties(sink.getProperties());
+      sink.getPartitionBy().ifPresent(analysis::setPartitionBy);
+
+      setSerdeOptions(sink);
 
       if (!sink.shouldCreateSink()) {
         final DataSource<?> existing = metaStore.getSource(sink.getName());
         if (existing == null) {
           throw new KsqlException("Unknown source: " + sink.getName());
-        }
-
-        if (metaStore.getTopic(sink.getName()) == null) {
-          throw new KsqlException(
-              "Sink topic " + sink.getName() + " does not exist in the metastore.");
         }
 
         analysis.setInto(Into.of(
@@ -214,7 +189,7 @@ class Analyzer {
         return;
       }
 
-      final String topicName = intoKafkaTopicName
+      final String topicName = sink.getProperties().getKafkaTopic()
           .orElseGet(() -> topicPrefix + sink.getName());
 
       final KsqlSerdeFactory valueSerdeFactory = getValueSerdeFactory(sink);
@@ -235,9 +210,24 @@ class Analyzer {
       ));
     }
 
+    private void setSerdeOptions(final Sink sink) {
+      final List<String> columnNames = getNoneMetaOrKeySelectAliases();
+
+      final Format valueFormat = getValueFormat(sink);
+
+      final Set<SerdeOption> serdeOptions = serdeOptionsSupplier.build(
+          columnNames,
+          valueFormat,
+          sink.getProperties().getWrapSingleValues(),
+          defaultSerdeOptions
+      );
+
+      analysis.setSerdeOptions(serdeOptions);
+    }
+
     private KsqlSerdeFactory getValueSerdeFactory(final Sink sink) {
       final Format format = getValueFormat(sink);
-      return serdeFactories.create(format, sink.getProperties());
+      return serdeFactories.create(format, sink.getProperties().getValueAvroSchemaName());
     }
 
     /**
@@ -281,81 +271,16 @@ class Analyzer {
     }
 
     private Format getValueFormat(final Sink sink) {
-      final Object serdeProperty = sink.getProperties().get(DdlConfig.VALUE_FORMAT_PROPERTY);
-
-      if (serdeProperty != null) {
-        return Format.of(StringUtil.cleanQuotes(serdeProperty.toString()));
-      }
-
-      final DataSource<?> leftSource = analysis.getFromDataSources().get(0).getDataSource();
-      return leftSource.getKsqlTopic().getValueSerdeFactory().getFormat();
+      return sink.getProperties().getValueFormat()
+          .orElseGet(() -> analysis
+              .getFromDataSources()
+              .get(0)
+              .getDataSource()
+              .getKsqlTopic()
+              .getValueSerdeFactory()
+              .getFormat());
     }
 
-    private void setIntoTopicName(final Map<String, Expression> properties) {
-      final Expression expression = properties.get(DdlConfig.KAFKA_TOPIC_NAME_PROPERTY);
-      if (expression == null) {
-        intoKafkaTopicName = Optional.empty();
-        return;
-      }
-
-      if (!(expression instanceof StringLiteral)) {
-        throw new KsqlException(
-            DdlConfig.KAFKA_TOPIC_NAME_PROPERTY + " should be a string literal.");
-      }
-
-      final String kafkaTopicName = ((StringLiteral) expression).getValue();
-      intoKafkaTopicName = Optional.of(kafkaTopicName);
-    }
-
-    private void setIntoTimestampColumnAndFormat(final Map<String, Expression> properties) {
-      final Expression columnNameExp = properties.get(KsqlConstants.SINK_TIMESTAMP_COLUMN_NAME);
-      if (columnNameExp != null) {
-        if (!(columnNameExp instanceof Literal)) {
-          throw new KsqlException(KsqlConstants.SINK_TIMESTAMP_COLUMN_NAME
-              + " set in the WITH clause must be set to a literal");
-        }
-
-        analysis.setTimestampColumnName(((Literal) columnNameExp).getValue().toString());
-      }
-
-      final Expression formatExp = properties.get(DdlConfig.TIMESTAMP_FORMAT_PROPERTY);
-      if (formatExp != null) {
-        if (columnNameExp == null) {
-          throw new KsqlException("You must specify a " + KsqlConstants.SINK_TIMESTAMP_COLUMN_NAME
-              + " if you wish to specify " + DdlConfig.TIMESTAMP_FORMAT_PROPERTY);
-        }
-
-        if (!(formatExp instanceof Literal)) {
-          throw new KsqlException(DdlConfig.TIMESTAMP_FORMAT_PROPERTY
-              + " set in the WITH clause must be set to a literal");
-        }
-
-        analysis.setTimestampFormat(((Literal) formatExp).getValue().toString());
-      }
-    }
-
-    private void setSerdeOptions(final Sink sink) {
-      final List<String> columnNames = getNoneMetaOrKeySelectAliases();
-
-      final Format valueFormat = getValueFormat(sink);
-
-      final Set<SerdeOption> serdeOptions = serdeOptionsSupplier.build(
-          columnNames,
-          sink.getProperties(),
-          valueFormat,
-          defaultSerdeOptions
-      );
-
-      analysis.setSerdeOptions(serdeOptions);
-    }
-
-    private void validateWithClause(final Set<String> withClauseVariables) {
-      for (final String withVariable : withClauseVariables) {
-        if (!VALID_WITH_PROPS.contains(withVariable.toUpperCase())) {
-          throw new KsqlException("Invalid config variable in the WITH clause: " + withVariable);
-        }
-      }
-    }
 
     @Override
     protected Node visitQuery(
@@ -402,6 +327,8 @@ class Analyzer {
 
     @Override
     protected Node visitJoin(final Join node, final Void context) {
+      isJoin = true;
+
       process(node.getLeft(), context);
       process(node.getRight(), context);
 
@@ -574,6 +501,8 @@ class Analyzer {
     }
 
     private void analyzeGroupBy(final GroupBy groupBy) {
+      isGroupBy = true;
+
       for (final GroupingElement groupingElement : groupBy.getGroupingElements()) {
         final Set<Expression> groupingSet = groupingElement.enumerateGroupingSets().get(0);
         analysis.addGroupByExpressions(groupingSet);
@@ -621,15 +550,39 @@ class Analyzer {
         }
       }
     }
+
+    public void validate() {
+      final String kafkaSources = analysis.getFromDataSources().stream()
+          .filter(s -> s.getDataSource().getKsqlTopic().getValueSerdeFactory().getFormat()
+              == Format.KAFKA)
+          .map(AliasedDataSource::getAlias)
+          .collect(Collectors.joining(", "));
+
+      if (kafkaSources.isEmpty()) {
+        return;
+      }
+
+      if (isJoin) {
+        throw new KsqlException("Source(s) " + kafkaSources + " are using the 'KAFKA' value format."
+            + " This format does not yet support JOIN."
+            + System.lineSeparator() + KAFKA_VALUE_FORMAT_LIMITATION_DETAILS);
+      }
+
+      if (isGroupBy) {
+        throw new KsqlException("Source(s) " + kafkaSources + " are using the 'KAFKA' value format."
+            + " This format does not yet support GROUP BY."
+            + System.lineSeparator() + KAFKA_VALUE_FORMAT_LIMITATION_DETAILS);
+      }
+    }
   }
 
   @FunctionalInterface
   interface SerdeOptionsSupplier {
 
     Set<SerdeOption> build(
-        List<String> columnNames,
-        Map<String, Expression> properties,
+        List<String> valueColumnNames,
         Format valueFormat,
+        Optional<Boolean> wrapSingleValues,
         Set<SerdeOption> singleFieldDefaults
     );
   }

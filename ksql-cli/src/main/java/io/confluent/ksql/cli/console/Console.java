@@ -30,7 +30,6 @@ import io.confluent.ksql.cli.console.table.builder.CommandStatusTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.ExecutionPlanTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.FunctionNameListTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.KafkaTopicsListTableBuilder;
-import io.confluent.ksql.cli.console.table.builder.KsqlTopicsListTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.PropertiesListTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.QueriesTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.StreamsListTableBuilder;
@@ -51,7 +50,7 @@ import io.confluent.ksql.rest.entity.KsqlEntity;
 import io.confluent.ksql.rest.entity.KsqlEntityList;
 import io.confluent.ksql.rest.entity.KsqlErrorMessage;
 import io.confluent.ksql.rest.entity.KsqlStatementErrorMessage;
-import io.confluent.ksql.rest.entity.KsqlTopicsList;
+import io.confluent.ksql.rest.entity.KsqlWarning;
 import io.confluent.ksql.rest.entity.PropertiesList;
 import io.confluent.ksql.rest.entity.Queries;
 import io.confluent.ksql.rest.entity.QueryDescription;
@@ -72,6 +71,7 @@ import io.confluent.ksql.util.HandlerMaps;
 import io.confluent.ksql.util.HandlerMaps.ClassHandlerMap1;
 import io.confluent.ksql.util.HandlerMaps.Handler1;
 import io.confluent.ksql.util.KsqlException;
+import io.confluent.ksql.util.TabularRow;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -126,8 +126,6 @@ public class Console implements Closeable {
               tablePrinter(StreamsList.class, StreamsListTableBuilder::new))
           .put(TablesList.class,
               tablePrinter(TablesList.class, TablesListTableBuilder::new))
-          .put(KsqlTopicsList.class,
-              tablePrinter(KsqlTopicsList.class, KsqlTopicsListTableBuilder::new))
           .put(KafkaTopicsList.class,
               tablePrinter(KafkaTopicsList.class, KafkaTopicsListTableBuilder::new))
           .put(ExecutionPlan.class,
@@ -285,7 +283,10 @@ public class Console implements Closeable {
     writer().println(shortMsg);
   }
 
-  public void printStreamedRow(final StreamedRow row) throws IOException {
+  public void printStreamedRow(
+      final StreamedRow row,
+      final List<FieldInfo> fields
+  ) throws IOException {
     if (row.getErrorMessage() != null) {
       printErrorMessage(row.getErrorMessage());
       return;
@@ -301,7 +302,7 @@ public class Console implements Closeable {
         printAsJson(row.getRow().getColumns());
         break;
       case TABULAR:
-        printAsTable(row.getRow());
+        printAsTable(row.getRow(), fields);
         break;
       default:
         throw new RuntimeException(String.format(
@@ -325,6 +326,21 @@ public class Console implements Closeable {
           }
           printAsTable(ksqlEntity);
         }
+        break;
+      default:
+        throw new RuntimeException(String.format(
+            "Unexpected output format: '%s'",
+            outputFormat.name()
+        ));
+    }
+  }
+
+  public void printRowHeader(final List<FieldInfo> fields) throws IOException {
+    switch (outputFormat) {
+      case JSON:
+        break;
+      case TABULAR:
+        writer().println(TabularRow.createHeader(getWidth(), fields));
         break;
       default:
         throw new RuntimeException(String.format(
@@ -372,14 +388,12 @@ public class Console implements Closeable {
         .findFirst();
   }
 
-  private void printAsTable(final GenericRow row) {
+  private void printAsTable(
+      final GenericRow row,
+      final List<FieldInfo> fields
+  ) {
     rowCaptor.addRow(row);
-    writer().println(
-        String.join(
-            " | ",
-            row.getColumns().stream().map(Objects::toString).collect(Collectors.toList())
-        )
-    );
+    writer().println(TabularRow.createRow(getWidth(), fields, row));
     flush();
   }
 
@@ -393,6 +407,14 @@ public class Console implements Closeable {
     }
     
     handler.handle(this, entity);
+
+    printWarnings(entity);
+  }
+
+  private void printWarnings(final KsqlEntity entity) {
+    for (final KsqlWarning warning : entity.getWarnings()) {
+      writer().println("WARNING: " + warning.getMessage());
+    }
   }
 
   @SuppressWarnings("ConstantConditions")

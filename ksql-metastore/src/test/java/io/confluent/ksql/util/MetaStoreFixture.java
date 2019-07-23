@@ -70,7 +70,6 @@ public final class MetaStoreFixture {
         Serdes::String
     );
 
-    metaStore.putTopic(ksqlTopic0);
     metaStore.putSource(ksqlStream0);
 
     final KsqlTopic
@@ -87,7 +86,6 @@ public final class MetaStoreFixture {
         Serdes::String
     );
 
-    metaStore.putTopic(ksqlTopic1);
     metaStore.putSource(ksqlStream1);
 
     final Schema test2Schema = SchemaBuilder.struct()
@@ -112,7 +110,6 @@ public final class MetaStoreFixture {
         Serdes::String
     );
 
-    metaStore.putTopic(ksqlTopic2);
     metaStore.putSource(ksqlTable);
 
     final Schema addressSchema = SchemaBuilder.struct()
@@ -160,7 +157,6 @@ public final class MetaStoreFixture {
         Serdes::String
     );
 
-    metaStore.putTopic(ksqlTopicOrders);
     metaStore.putSource(ksqlStreamOrders);
 
     final Schema testTable3 = SchemaBuilder.struct()
@@ -185,7 +181,6 @@ public final class MetaStoreFixture {
         Serdes::String
     );
 
-    metaStore.putTopic(ksqlTopic3);
     metaStore.putSource(ksqlTable3);
 
     final Schema nestedArrayStructMapSchema = SchemaBuilder.struct()
@@ -211,7 +206,6 @@ public final class MetaStoreFixture {
         Serdes::String
     );
 
-    metaStore.putTopic(nestedArrayStructMapTopic);
     metaStore.putSource(nestedArrayStructMapOrders);
 
     final KsqlTopic ksqlTopic4 =
@@ -228,7 +222,6 @@ public final class MetaStoreFixture {
         Serdes::String
     );
 
-    metaStore.putTopic(ksqlTopic4);
     metaStore.putSource(ksqlStream4);
 
     metaStore.putSource(new MaterializedView<>(

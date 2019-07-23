@@ -26,6 +26,7 @@ import io.confluent.ksql.metastore.model.KsqlStream;
 import io.confluent.ksql.metastore.model.KsqlTable;
 import io.confluent.ksql.metastore.model.KsqlTopic;
 import io.confluent.ksql.metastore.model.MaterializedView;
+import io.confluent.ksql.parser.properties.with.CreateSourceAsProperties;
 import io.confluent.ksql.parser.tree.DereferenceExpression;
 import io.confluent.ksql.parser.tree.Expression;
 import io.confluent.ksql.parser.tree.QualifiedName;
@@ -56,12 +57,11 @@ public class Analysis {
   private final List<String> selectExpressionAlias = new ArrayList<>();
   private final List<Expression> groupByExpressions = new ArrayList<>();
   private WindowExpression windowExpression = null;
-  private Optional<String> timestampColumnName = Optional.empty();
-  private Optional<String> timestampFormat = Optional.empty();
   private Optional<String> partitionBy = Optional.empty();
   private ImmutableSet<SerdeOption> serdeOptions = ImmutableSet.of();
   private Expression havingExpression = null;
   private OptionalInt limitClause = OptionalInt.empty();
+  private CreateSourceAsProperties withProperties = CreateSourceAsProperties.none();
 
   void addSelectItem(final Expression expression, final String alias) {
     selectExpressions.add(expression);
@@ -114,22 +114,6 @@ public class Analysis {
 
   void setHavingExpression(final Expression havingExpression) {
     this.havingExpression = havingExpression;
-  }
-
-  public Optional<String> getTimestampColumnName() {
-    return timestampColumnName;
-  }
-
-  void setTimestampColumnName(final String columnName) {
-    timestampColumnName = Optional.of(columnName);
-  }
-
-  public Optional<String> getTimestampFormat() {
-    return timestampFormat;
-  }
-
-  void setTimestampFormat(final String format) {
-    timestampFormat = Optional.of(format);
   }
 
   public Optional<String> getPartitionBy() {
@@ -200,6 +184,14 @@ public class Analysis {
 
   public Set<SerdeOption> getSerdeOptions() {
     return serdeOptions;
+  }
+
+  void setProperties(final CreateSourceAsProperties properties) {
+    withProperties = Objects.requireNonNull(properties, "properties");
+  }
+
+  public CreateSourceAsProperties getProperties() {
+    return withProperties;
   }
 
   @Immutable

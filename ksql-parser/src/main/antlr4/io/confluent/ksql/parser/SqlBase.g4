@@ -38,7 +38,7 @@ statement
     | (LIST | SHOW) STREAMS EXTENDED?                                       #listStreams
     | (LIST | SHOW) TABLES EXTENDED?                                        #listTables
     | (LIST | SHOW) FUNCTIONS                                               #listFunctions
-    | DESCRIBE EXTENDED? (qualifiedName | TOPIC qualifiedName)              #showColumns
+    | DESCRIBE EXTENDED? qualifiedName                                      #showColumns
     | DESCRIBE FUNCTION qualifiedName                                       #describeFunction
     | PRINT (qualifiedName | STRING) printClause                            #printTopic
     | (LIST | SHOW) QUERIES EXTENDED?                                       #listQueries
@@ -80,7 +80,7 @@ tableElements
     ;
 
 tableElement
-    : identifier type
+    : identifier type (KEY)?
     ;
 
 tableProperties
@@ -317,6 +317,7 @@ nonReserved
     | EXPLAIN | ANALYZE | TYPE
     | SET | RESET
     | IF
+    | KEY
     ;
 
 SELECT: 'SELECT';
@@ -429,6 +430,7 @@ SCRIPT: 'SCRIPT';
 DECIMAL: 'DECIMAL';
 MATERIALIZED: 'MATERIALIZED';
 VIEW: 'VIEW';
+KEY: 'KEY';
 
 IF: 'IF';
 

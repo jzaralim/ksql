@@ -75,6 +75,11 @@ public class KsqlConfig extends AbstractConfig {
 
   public static final String SINK_WINDOW_CHANGE_LOG_ADDITIONAL_RETENTION_MS_PROPERTY =
       "ksql.sink.window.change.log.additional.retention";
+  public static final String SINK_WINDOW_CHANGE_LOG_ADDITIONAL_RETENTION_MS_PROPERTY_DOC =
+      "The default window change log additional retention time. This "
+          + "is a streams config value which will be added to a windows maintainMs to ensure "
+          + "data is not deleted from the log prematurely. Allows for clock drift. "
+          + "Default is 1 day";
 
   public static final String
       FAIL_ON_DESERIALIZATION_ERROR_CONFIG = "ksql.fail.on.deserialization.error";
@@ -95,6 +100,13 @@ public class KsqlConfig extends AbstractConfig {
       KSQL_TRANSIENT_QUERY_NAME_PREFIX_CONFIG = "ksql.transient.prefix";
   public static final String
       KSQL_TRANSIENT_QUERY_NAME_PREFIX_DEFAULT = "transient_";
+
+  private static final String KSQL_TRANSIENT_QUERY_NAME_PREFIX_CONFIG_DOC =
+      "Second part of the prefix for transient queries. For instance if "
+          + "the prefix is transient_ the query name would be "
+          + "ksql_transient_4120896722607083946_1509389010601 where 'ksql_' is the first prefix"
+          + " and '_transient' is the second part of the prefix for the query id the third and "
+          + "4th parts are a random long value and the current timestamp. ";
 
   public static final String
       KSQL_OUTPUT_TOPIC_NAME_PREFIX_CONFIG = "ksql.output.topic.name.prefix";
@@ -146,6 +158,11 @@ public class KsqlConfig extends AbstractConfig {
   private static final String KSQL_USE_NAMED_AVRO_MAPS_DOC = "";
 
   public static final String KSQL_USE_LEGACY_KEY_FIELD = "ksql.query.fields.key.legacy";
+  private static final String KSQL_USE_LEGACY_KEY_FIELD_DOC =
+      "Determines if the legacy key field is used when building queries. "
+          + "This setting is automatically applied for persistent queries started by "
+          + "older versions of KSQL. "
+          + "This setting should not be set manually.";
 
   public static final String KSQL_WRAP_SINGLE_VALUES =
       "ksql.persistence.wrap.single.values";
@@ -159,6 +176,10 @@ public class KsqlConfig extends AbstractConfig {
   private static final String KSQL_CUSTOM_METRICS_EXTENSION_DOC =
       "Extension for supplying custom metrics to be emitted along with "
       + "the engine's default JMX metrics";
+  private static final String SINK_NUMBER_OF_REPLICAS_PROPERTY_DOC =
+      "The default number of replicas for the topics created by KSQL "
+          + "in 5.2 and earlier versions."
+          + "This property should not be set for 5.3 and later versions.";
 
   public static final String
       defaultSchemaRegistryUrl = "http://localhost:8081";
@@ -175,6 +196,10 @@ public class KsqlConfig extends AbstractConfig {
   public static final String KSQL_STREAMS_PREFIX = "ksql.streams.";
 
   public static final String KSQL_COLLECT_UDF_METRICS = "ksql.udf.collect.metrics";
+  private static final String KSQL_COLLECT_UDF_METRICS_DOC =
+      "Whether or not metrics should be collected for custom udfs. Default is false. Note: "
+          + "this will add some overhead to udf invocation. It is recommended that this "
+          + " be set to false in production.";
   public static final String KSQL_UDF_SECURITY_MANAGER_ENABLED = "ksql.udf.enable.security.manager";
 
   public static final String KSQL_INSERT_INTO_VALUES_ENABLED = "ksql.insert.into.values.enabled";
@@ -185,6 +210,18 @@ public class KsqlConfig extends AbstractConfig {
   public static final String KSQL_SECURITY_EXTENSION_DEFAULT = null;
   public static final String KSQL_SECURITY_EXTENSION_DOC = "A KSQL security extension class that "
       + "provides authorization to KSQL servers.";
+
+  public static final String KSQL_ENABLE_TOPIC_ACCESS_VALIDATOR = "ksql.access.validator.enable";
+  public static final String KSQL_ACCESS_VALIDATOR_ON = "on";
+  public static final String KSQL_ACCESS_VALIDATOR_OFF = "off";
+  public static final String KSQL_ACCESS_VALIDATOR_AUTO = "auto";
+  public static final String KSQL_ACCESS_VALIDATOR_DOC =
+      "Config to enable/disable the topic access validator, which checks that KSQL can access "
+          + "the involved topics before committing to execute a statement. Possible values are "
+          + "\"on\", \"off\", and \"auto\". Setting to \"on\" enables the validator. Setting to "
+          + "\"off\" disables the validator. If set to \"auto\", KSQL will attempt to discover "
+          + "whether the Kafka cluster supports the required API, and enables the validator if "
+          + "it does.";
 
   public static final Collection<CompatibilityBreakingConfigDef> COMPATIBLY_BREAKING_CONFIG_DEFS
       = ImmutableList.of(
@@ -247,9 +284,7 @@ public class KsqlConfig extends AbstractConfig {
               null,
               ConfigDef.Importance.LOW,
               Optional.empty(),
-              "The default number of replicas for the topics created by KSQL "
-                  + "in 5.2 and earlier versions."
-                  + "This property should not be set for 5.3 and later versions."
+              SINK_NUMBER_OF_REPLICAS_PROPERTY_DOC
           ),
           new CompatibilityBreakingConfigDef(
               KSQL_USE_NAMED_AVRO_MAPS,
@@ -267,10 +302,7 @@ public class KsqlConfig extends AbstractConfig {
               false,
               ConfigDef.Importance.LOW,
               Optional.empty(),
-              "Determines if the legacy key field is used when building queries. "
-                  + "This setting is automatically applied for persistent queries started by "
-                  + "older versions of KSQL. "
-                  + "This setting should not be set manually."
+              KSQL_USE_LEGACY_KEY_FIELD_DOC
           )
   );
 
@@ -405,11 +437,7 @@ public class KsqlConfig extends AbstractConfig {
             ConfigDef.Type.STRING,
             KSQL_TRANSIENT_QUERY_NAME_PREFIX_DEFAULT,
             ConfigDef.Importance.MEDIUM,
-            "Second part of the prefix for transient queries. For instance if "
-            + "the prefix is transient_ the query name would be "
-            + "ksql_transient_4120896722607083946_1509389010601 where 'ksql_' is the first prefix"
-            + " and '_transient' is the second part of the prefix for the query id the third and "
-            + "4th parts are a random long value and the current timestamp. "
+            KSQL_TRANSIENT_QUERY_NAME_PREFIX_CONFIG_DOC
         ).define(
             KSQL_OUTPUT_TOPIC_NAME_PREFIX_CONFIG,
             ConfigDef.Type.STRING,
@@ -421,10 +449,7 @@ public class KsqlConfig extends AbstractConfig {
             ConfigDef.Type.LONG,
             KsqlConstants.defaultSinkWindowChangeLogAdditionalRetention,
             ConfigDef.Importance.MEDIUM,
-            "The default window change log additional retention time. This "
-            + "is a streams config value which will be added to a windows maintainMs to ensure "
-            + "data is not deleted from the log prematurely. Allows for clock drift. "
-            + "Default is 1 day"
+            SINK_WINDOW_CHANGE_LOG_ADDITIONAL_RETENTION_MS_PROPERTY_DOC
         ).define(
             SCHEMA_REGISTRY_URL_PROPERTY,
             ConfigDef.Type.STRING,
@@ -460,9 +485,7 @@ public class KsqlConfig extends AbstractConfig {
             ConfigDef.Type.BOOLEAN,
             false,
             ConfigDef.Importance.LOW,
-            "Whether or not metrics should be collected for custom udfs. Default is false. Note: "
-                + "this will add some overhead to udf invocation. It is recommended that this "
-                + " be set to false in production."
+            KSQL_COLLECT_UDF_METRICS_DOC
         ).define(
             KSQL_EXT_DIR,
             ConfigDef.Type.STRING,
@@ -526,6 +549,17 @@ public class KsqlConfig extends AbstractConfig {
             null,
             ConfigDef.Importance.LOW,
             KSQL_CUSTOM_METRICS_EXTENSION_DOC
+        ).define(
+            KSQL_ENABLE_TOPIC_ACCESS_VALIDATOR,
+            Type.STRING,
+            KSQL_ACCESS_VALIDATOR_AUTO,
+            ValidString.in(
+                KSQL_ACCESS_VALIDATOR_ON,
+                KSQL_ACCESS_VALIDATOR_OFF,
+                KSQL_ACCESS_VALIDATOR_AUTO
+            ),
+            ConfigDef.Importance.LOW,
+            KSQL_ACCESS_VALIDATOR_DOC
         )
         .withClientSslSupport();
     for (final CompatibilityBreakingConfigDef compatibilityBreakingConfigDef

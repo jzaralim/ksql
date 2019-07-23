@@ -33,11 +33,35 @@ import io.confluent.ksql.TestTerminal;
 import io.confluent.ksql.cli.console.Console.NoOpRowCaptor;
 import io.confluent.ksql.cli.console.cmd.CliSpecificCommand;
 import io.confluent.ksql.metastore.model.DataSource.DataSourceType;
-import io.confluent.ksql.rest.entity.*;
+import io.confluent.ksql.rest.entity.ArgumentInfo;
+import io.confluent.ksql.rest.entity.CommandStatus;
+import io.confluent.ksql.rest.entity.CommandStatusEntity;
+import io.confluent.ksql.rest.entity.ConnectorEntity;
+import io.confluent.ksql.rest.entity.ConnectorInfo;
+import io.confluent.ksql.rest.entity.EntityQueryId;
+import io.confluent.ksql.rest.entity.ExecutionPlan;
+import io.confluent.ksql.rest.entity.FieldInfo;
+import io.confluent.ksql.rest.entity.FunctionDescriptionList;
+import io.confluent.ksql.rest.entity.FunctionInfo;
+import io.confluent.ksql.rest.entity.FunctionType;
+import io.confluent.ksql.rest.entity.KsqlEntity;
+import io.confluent.ksql.rest.entity.KsqlEntityList;
+import io.confluent.ksql.rest.entity.KsqlWarning;
+import io.confluent.ksql.rest.entity.PropertiesList;
+import io.confluent.ksql.rest.entity.Queries;
+import io.confluent.ksql.rest.entity.RunningQuery;
+import io.confluent.ksql.rest.entity.SchemaInfo;
+import io.confluent.ksql.rest.entity.SourceDescription;
+import io.confluent.ksql.rest.entity.SourceDescriptionEntity;
+import io.confluent.ksql.rest.entity.SourceInfo;
+import io.confluent.ksql.rest.entity.StreamedRow;
+import io.confluent.ksql.rest.entity.StreamsList;
+import io.confluent.ksql.rest.entity.TablesList;
+import io.confluent.ksql.rest.entity.TopicDescription;
 import io.confluent.ksql.rest.server.computation.CommandId;
 import io.confluent.ksql.rest.util.EntityUtil;
 import io.confluent.ksql.schema.ksql.LogicalSchema;
-import io.confluent.ksql.serde.Format;
+import io.confluent.ksql.schema.ksql.SqlBaseType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -58,11 +82,31 @@ public class ConsoleTest {
 
   private static final String CLI_CMD_NAME = "some command";
   private static final String WHITE_SPACE = " \t ";
+  private static final List<FieldInfo> HEADER =
+          ImmutableList.of(
+              new FieldInfo("foo", new SchemaInfo(SqlBaseType.STRING, null, null)),
+              new FieldInfo("bar", new SchemaInfo(SqlBaseType.STRING, null, null)));
 
   private final TestTerminal terminal;
   private final Console console;
   private final Supplier<String> lineSupplier;
   private final CliSpecificCommand cliCommand;
+  private final SourceDescription sourceDescription = new SourceDescription(
+      "TestSource",
+      Collections.emptyList(),
+      Collections.emptyList(),
+      buildTestSchema(Schema.OPTIONAL_INT32_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA),
+      DataSourceType.KTABLE.getKsqlType(),
+      "key",
+      "2000-01-01",
+      "stats",
+      "errors",
+      true,
+      "avro",
+      "kadka-topic",
+      2,
+      1
+  );
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<OutputFormat> data() {
@@ -87,22 +131,43 @@ public class ConsoleTest {
 
   @Test
   public void testPrintGenericStreamedRow() throws IOException {
+    // Given:
     final StreamedRow row = StreamedRow.row(new GenericRow(ImmutableList.of("col_1", "col_2")));
-    console.printStreamedRow(row);
+
+    // When:
+    console.printStreamedRow(row, HEADER);
+
+    // Then:
+    if (console.getOutputFormat() == OutputFormat.TABULAR) {
+      assertThat(terminal.getOutputString(), containsString("col_1"));
+      assertThat(terminal.getOutputString(), containsString("col_2"));
+    }
+  }
+
+  @Test
+  public void testPrintHeader() throws IOException {
+    // When:
+    console.printRowHeader(HEADER);
+
+    // Then:
+    if (console.getOutputFormat() == OutputFormat.TABULAR) {
+      assertThat(terminal.getOutputString(), containsString("foo"));
+      assertThat(terminal.getOutputString(), containsString("bar"));
+    }
   }
 
   @Test
   public void testPrintErrorStreamedRow() throws IOException {
     final FakeException exception = new FakeException();
 
-    console.printStreamedRow(StreamedRow.error(exception));
+    console.printStreamedRow(StreamedRow.error(exception), HEADER);
 
     assertThat(terminal.getOutputString(), is(exception.getMessage() + "\n"));
   }
 
   @Test
   public void testPrintFinalMessageStreamedRow() throws IOException {
-    console.printStreamedRow(StreamedRow.finalMessage("Some message"));
+    console.printStreamedRow(StreamedRow.finalMessage("Some message"), HEADER);
     assertThat(terminal.getOutputString(), is("Some message\n"));
   }
 
@@ -131,7 +196,8 @@ public class ConsoleTest {
           + "    \"status\" : \"SUCCESS\",\n"
           + "    \"message\" : \"Success Message\"\n"
           + "  },\n"
-          + "  \"commandSequenceNumber\" : 0\n"
+          + "  \"commandSequenceNumber\" : 0,\n"
+          + "  \"warnings\" : [ ]\n"
           + "} ]\n"));
     } else {
       assertThat(output, is("\n"
@@ -169,7 +235,8 @@ public class ConsoleTest {
           + "    \"k3\" : true\n"
           + "  },\n"
           + "  \"overwrittenProperties\" : [ ],\n"
-          + "  \"defaultProperties\" : [ ]\n"
+          + "  \"defaultProperties\" : [ ],\n"
+          + "  \"warnings\" : [ ]\n"
           + "} ]\n"));
     } else {
       assertThat(output, is("\n"
@@ -207,7 +274,8 @@ public class ConsoleTest {
           + "    \"sinks\" : [ \"Test\" ],\n"
           + "    \"id\" : \"0\",\n"
           + "    \"queryString\" : \"select * from t1\"\n"
-          + "  } ]\n"
+          + "  } ],\n"
+          + "  \"warnings\" : [ ]\n"
           + "} ]\n"));
     } else {
       assertThat(output, is("\n"
@@ -254,9 +322,23 @@ public class ConsoleTest {
         new SourceDescriptionEntity(
             "some sql",
             new SourceDescription(
-                "TestSource", readQueries, writeQueries, fields,
-                DataSourceType.KTABLE.getKsqlType(), "key", "2000-01-01", "stats",
-                "errors", false, "avro", "kadka-topic", 1, 1))
+                "TestSource",
+                readQueries,
+                writeQueries,
+                fields,
+                DataSourceType.KTABLE.getKsqlType(),
+                "key",
+                "2000-01-01",
+                "stats",
+                "errors",
+                false,
+                "avro",
+                "kadka-topic",
+                1,
+                1
+            ),
+            Collections.emptyList()
+        )
     ));
 
     // When:
@@ -376,7 +458,8 @@ public class ConsoleTest {
           + "    \"topic\" : \"kadka-topic\",\n"
           + "    \"partitions\" : 1,\n"
           + "    \"replication\" : 1\n"
-          + "  }\n"
+          + "  },\n"
+          + "  \"warnings\" : [ ]\n"
           + "} ]\n"));
     } else {
       assertThat(output, is("\n"
@@ -417,6 +500,7 @@ public class ConsoleTest {
           + "  \"name\" : \"TestTopic\",\n"
           + "  \"format\" : \"AVRO\",\n"
           + "  \"schemaString\" : \"schemaString\",\n"
+          + "  \"warnings\" : [ ],\n"
           + "  \"kafkaTopic\" : \"TestKafkaTopic\"\n"
           + "} ]\n"));
     } else {
@@ -450,7 +534,8 @@ public class ConsoleTest {
           + "    \"name\" : \"TestStream\",\n"
           + "    \"topic\" : \"TestTopic\",\n"
           + "    \"format\" : \"AVRO\"\n"
-          + "  } ]\n"
+          + "  } ],\n"
+          + "  \"warnings\" : [ ]\n"
           + "} ]\n"));
     } else {
       assertThat(output, is("\n"
@@ -503,7 +588,8 @@ public class ConsoleTest {
                + "    \"name\" : \"C\",\n"
                + "    \"topic\" : \"TestTopic\",\n"
                + "    \"format\" : \"AVRO\"\n"
-               + "  } ]\n"
+               + "  } ],\n"
+               + "  \"warnings\" : [ ]\n"
                +"} ]\n"));
     } else {
       assertThat(output, is("\n"
@@ -540,7 +626,8 @@ public class ConsoleTest {
           + "    \"topic\" : \"TestTopic\",\n"
           + "    \"format\" : \"JSON\",\n"
           + "    \"isWindowed\" : false\n"
-          + "  } ]\n"
+          + "  } ],\n"
+          + "  \"warnings\" : [ ]\n"
           + "} ]\n"));
     } else {
       assertThat(output, is("\n"
@@ -598,7 +685,8 @@ public class ConsoleTest {
               + "    \"topic\" : \"TestTopic\",\n"
               + "    \"format\" : \"JSON\",\n"
               + "    \"isWindowed\" : false\n"
-              + "  } ]\n"
+              + "  } ],\n"
+              + "  \"warnings\" : [ ]\n"
               + "} ]\n"));
     } else {
       assertThat(output, is("\n"
@@ -609,38 +697,6 @@ public class ConsoleTest {
               + " C          | TestTopic   | JSON   | false    \n"
               + " Z          | TestTopic   | JSON   | false    \n"
               + "----------------------------------------------\n"));
-    }
-  }
-
-  @Test
-  public void testPrintTopicsList() throws IOException {
-    // Given:
-    final KsqlEntityList entityList = new KsqlEntityList(ImmutableList.of(
-        new KsqlTopicsList("e",
-            ImmutableList.of(new KsqlTopicInfo("TestTopic", "TestKafkaTopic", Format.JSON)))
-    ));
-
-    // When:
-    console.printKsqlEntityList(entityList);
-
-    // Then:
-    final String output = terminal.getOutputString();
-    if (console.getOutputFormat() == OutputFormat.JSON) {
-      assertThat(output, is("[ {\n"
-          + "  \"@type\" : \"ksql_topics\",\n"
-          + "  \"statementText\" : \"e\",\n"
-          + "  \"topics\" : [ {\n"
-          + "    \"name\" : \"TestTopic\",\n"
-          + "    \"kafkaTopic\" : \"TestKafkaTopic\",\n"
-          + "    \"format\" : \"JSON\"\n"
-          + "  } ]\n"
-          + "} ]\n"));
-    } else {
-      assertThat(output, is("\n"
-          + " Ksql Topic | Kafka Topic    | Format \n"
-          + "--------------------------------------\n"
-          + " TestTopic  | TestKafkaTopic | JSON   \n"
-          + "--------------------------------------\n"));
     }
   }
 
@@ -660,6 +716,7 @@ public class ConsoleTest {
       assertThat(output, is("[ {\n"
           + "  \"@type\" : \"executionPlan\",\n"
           + "  \"statementText\" : \"Test Execution Plan\",\n"
+          + "  \"warnings\" : [ ],\n"
           + "  \"executionPlan\" : \"Test Execution Plan\"\n"
           + "} ]\n"));
     } else {
@@ -685,10 +742,23 @@ public class ConsoleTest {
         new SourceDescriptionEntity(
             "e",
             new SourceDescription(
-                "TestSource", readQueries, writeQueries,
-                buildTestSchema(Schema.OPTIONAL_STRING_SCHEMA), DataSourceType.KTABLE.getKsqlType(),
-                "key", "2000-01-01", "stats", "errors", true, "avro", "kadka-topic",
-                2, 1))));
+                "TestSource",
+                readQueries,
+                writeQueries,
+                buildTestSchema(Schema.OPTIONAL_STRING_SCHEMA),
+                DataSourceType.KTABLE.getKsqlType(),
+                "key",
+                "2000-01-01",
+                "stats",
+                "errors",
+                true,
+                "avro",
+                "kadka-topic",
+                2, 1
+            ),
+            Collections.emptyList()
+        ))
+    );
 
     // When:
     console.printKsqlEntityList(entityList);
@@ -743,7 +813,8 @@ public class ConsoleTest {
           + "    \"topic\" : \"kadka-topic\",\n"
           + "    \"partitions\" : 2,\n"
           + "    \"replication\" : 1\n"
-          + "  }\n"
+          + "  },\n"
+          + "  \"warnings\" : [ ]\n"
           + "} ]\n"));
     } else {
       assertThat(output, is("\n"
@@ -779,6 +850,31 @@ public class ConsoleTest {
           + "stats\n"
           + "errors\n"
           + "(Statistics of the local KSQL server interaction with the Kafka topic kadka-topic)\n"));
+    }
+  }
+
+  @Test
+  public void shouldPrintWarnings() throws IOException {
+    // Given:
+    final KsqlEntity entity = new SourceDescriptionEntity(
+        "e",
+        sourceDescription,
+        ImmutableList.of(new KsqlWarning("oops"), new KsqlWarning("doh!"))
+    );
+
+    // When:
+    console.printKsqlEntityList(ImmutableList.of(entity));
+
+    // Then:
+    final String output = terminal.getOutputString();
+    if (console.getOutputFormat() == OutputFormat.TABULAR) {
+      assertThat(
+          output,
+          containsString("WARNING: oops\nWARNING: doh")
+      );
+    } else {
+      assertThat(output, containsString("\"message\" : \"oops\""));
+      assertThat(output, containsString("\"message\" : \"doh!\""));
     }
   }
 
@@ -865,6 +961,7 @@ public class ConsoleTest {
       assertThat(output, is("[ {\n"
           + "  \"@type\" : \"connectorInfo\",\n"
           + "  \"statementText\" : \"\",\n"
+          + "  \"warnings\" : [ ],\n"
           + "  \"connectorInfo\" : {\n"
           + "    \"name\" : \"foo\",\n"
           + "    \"config\" : null,\n"
