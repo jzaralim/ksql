@@ -20,12 +20,15 @@ import io.confluent.ksql.exception.KafkaResponseGetFailedException;
 import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.metastore.model.KsqlStream;
 import io.confluent.ksql.metastore.model.KsqlTable;
+import io.confluent.ksql.metastore.model.MaterializedView;
+import io.confluent.ksql.parser.tree.ListMaterialized;
 import io.confluent.ksql.parser.tree.ListStreams;
 import io.confluent.ksql.parser.tree.ListTables;
 import io.confluent.ksql.parser.tree.ShowColumns;
 import io.confluent.ksql.rest.entity.EntityQueryId;
 import io.confluent.ksql.rest.entity.KsqlEntity;
 import io.confluent.ksql.rest.entity.KsqlWarning;
+import io.confluent.ksql.rest.entity.MaterializedList;
 import io.confluent.ksql.rest.entity.RunningQuery;
 import io.confluent.ksql.rest.entity.SourceDescription;
 import io.confluent.ksql.rest.entity.SourceDescriptionEntity;
@@ -123,6 +126,21 @@ public final class ListSourceExecutor {
             .collect(Collectors.toList())));
   }
 
+  public static Optional<KsqlEntity> materialized(
+      final ConfiguredStatement<ListMaterialized> statement,
+      final KsqlExecutionContext executionContext,
+      final ServiceContext serviceContext
+  ) {
+    final List<MaterializedView<?>> materializedViews =
+        getSpecificMaterializedViews(executionContext);
+
+    return Optional.of(new MaterializedList(
+        statement.getStatementText(),
+        materializedViews.stream()
+            .map(SourceInfo.Materialized::new)
+            .collect(Collectors.toList())));
+  }
+
   public static Optional<KsqlEntity> columns(
       final ConfiguredStatement<ShowColumns> statement,
       final KsqlExecutionContext executionContext,
@@ -164,6 +182,17 @@ public final class ListSourceExecutor {
         .filter(structuredDataSource -> !structuredDataSource.getName().equalsIgnoreCase(
             KsqlRestApplication.getCommandsStreamName()))
         .map(table -> (KsqlStream<?>) table)
+        .collect(Collectors.toList());
+  }
+
+  private static List<MaterializedView<?>> getSpecificMaterializedViews(
+      final KsqlExecutionContext executionContext
+  ) {
+    return executionContext.getMetaStore().getAllDataSources().values().stream()
+        .filter(MaterializedView.class::isInstance)
+        .filter(structuredDataSource -> !structuredDataSource.getName().equalsIgnoreCase(
+            KsqlRestApplication.getCommandsStreamName()))
+        .map(view -> (MaterializedView<?>) view)
         .collect(Collectors.toList());
   }
 

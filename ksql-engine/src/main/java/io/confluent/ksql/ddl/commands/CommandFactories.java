@@ -20,6 +20,7 @@ import static io.confluent.ksql.metastore.model.DataSource.DataSourceType;
 import io.confluent.ksql.parser.tree.CreateStream;
 import io.confluent.ksql.parser.tree.CreateTable;
 import io.confluent.ksql.parser.tree.DdlStatement;
+import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.parser.tree.DropStream;
 import io.confluent.ksql.parser.tree.DropTable;
 import io.confluent.ksql.services.ServiceContext;
@@ -43,6 +44,7 @@ public class CommandFactories implements DdlCommandFactory {
       .put(CreateTable.class, CommandFactories::handleCreateTable)
       .put(DropStream.class, CommandFactories::handleDropStream)
       .put(DropTable.class, CommandFactories::handleDropTable)
+      .put(DropMaterialized.class, CommandFactories::handleDropMaterialized)
       .build();
 
   private final ServiceContext serviceContext;
@@ -108,6 +110,14 @@ public class CommandFactories implements DdlCommandFactory {
     return new DropSourceCommand(
         statement,
         DataSourceType.KTABLE
+    );
+  }
+
+  @SuppressWarnings("MethodMayBeStatic")
+  private DropSourceCommand handleDropMaterialized(final DropMaterialized statement) {
+    return new DropSourceCommand(
+        statement,
+        DataSourceType.MATERIALIZED
     );
   }
 

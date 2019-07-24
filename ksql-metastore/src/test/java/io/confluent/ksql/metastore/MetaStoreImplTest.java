@@ -304,12 +304,12 @@ public class MetaStoreImplTest {
     try {
       metaStore.removeConnector("foo");
     } catch (final KsqlException e) {
-      assertThat(e.getMessage(), equalTo("No connector named foo registered."));
+      assertThat(e.getMessage(), equalTo("No connector with name foo exists."));
     }
     try {
       metaStore.putConnector("bar");
     } catch (final KsqlException e) {
-      assertThat(e.getMessage(), equalTo("Connector bar already exists."));
+      assertThat(e.getMessage(), equalTo("Cannot add bar : A connector with the same name already exists"));
     }
   }
 

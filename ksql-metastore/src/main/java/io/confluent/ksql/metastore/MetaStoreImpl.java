@@ -22,8 +22,8 @@ import io.confluent.ksql.function.UdfFactory;
 import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.util.KsqlException;
 import io.confluent.ksql.util.KsqlReferentialIntegrityException;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,7 +40,7 @@ public final class MetaStoreImpl implements MutableMetaStore {
   private final Map<String, SourceInfo> dataSources = new ConcurrentHashMap<>();
   private final Object referentialIntegrityLock = new Object();
   private final FunctionRegistry functionRegistry;
-  private final Set<String> connectors = new HashSet<>();
+  private final Map<String, String> connectors = new ConcurrentHashMap<>();
 
   public MetaStoreImpl(final FunctionRegistry functionRegistry) {
     this.functionRegistry = Objects.requireNonNull(functionRegistry, "functionRegistry");
@@ -48,10 +48,11 @@ public final class MetaStoreImpl implements MutableMetaStore {
 
   private MetaStoreImpl(
       final Map<String, SourceInfo> dataSources,
+      final Map<String, String> connectors,
       final FunctionRegistry functionRegistry
   ) {
     this.functionRegistry = Objects.requireNonNull(functionRegistry, "functionRegistry");
-
+    connectors.forEach((name, info) -> this.connectors.put(name, info));
     dataSources.forEach((name, info) -> this.dataSources.put(name, info.copy()));
   }
 
@@ -181,28 +182,35 @@ public final class MetaStoreImpl implements MutableMetaStore {
   @Override
   public MutableMetaStore copy() {
     synchronized (referentialIntegrityLock) {
-      return new MetaStoreImpl(dataSources, functionRegistry);
+      return new MetaStoreImpl(dataSources, connectors, functionRegistry);
     }
   }
 
   @Override
   public void putConnector(final String connector) {
-    if (connectors.contains(connector)) {
-      throw new KsqlException(String.format("Connector %s already exists.", connector));
+    final String existing = connectors.putIfAbsent(connector, "RUNNING");
+
+    if (existing != null) {
+      throw new KsqlException(String.format(
+          "Cannot add %s : A connector with the same name already exists", connector));
     }
-    connectors.add(connector);
   }
 
   @Override
   public void removeConnector(final String connector) {
-    if (!connectors.remove(connector)) {
-      throw new KsqlException(String.format("No connector named %s registered.", connector));
+    synchronized (referentialIntegrityLock) {
+      connectors.compute(connector, (ignored, status) -> {
+        if (status == null) {
+          throw new KsqlException(String.format("No connector with name %s exists.", connector));
+        }
+        return null;
+      });
     }
   }
 
   @Override
   public List<String> getAllConnectors() {
-    return connectors.stream().collect(Collectors.toList());
+    return new ArrayList<>(connectors.keySet());
   }
 
   @Override

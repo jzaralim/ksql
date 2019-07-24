@@ -21,6 +21,7 @@ import io.confluent.ksql.parser.tree.CreateStream;
 import io.confluent.ksql.parser.tree.CreateStreamAsSelect;
 import io.confluent.ksql.parser.tree.CreateTable;
 import io.confluent.ksql.parser.tree.CreateTableAsSelect;
+import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.parser.tree.DropStream;
 import io.confluent.ksql.parser.tree.DropTable;
 import io.confluent.ksql.parser.tree.InsertInto;
@@ -55,6 +56,8 @@ public class CommandIdAssigner {
             command -> getDropStreamCommandId((DropStream) command))
           .put(DropTable.class,
             command -> getDropTableCommandId((DropTable) command))
+          .put(DropMaterialized.class,
+              command -> getDropMaterializedCommandId((DropMaterialized) command))
           .put(TerminateCluster.class,
             command -> new CommandId(Type.CLUSTER, "TerminateCluster", Action.TERMINATE))
           .put(CreateMaterializedView.class,
@@ -117,6 +120,15 @@ public class CommandIdAssigner {
     return new CommandId(
         CommandId.Type.TABLE,
         dropTableQuery.getName().getSuffix(),
+        CommandId.Action.DROP
+    );
+  }
+
+  private static CommandId getDropMaterializedCommandId(
+      final DropMaterialized dropMaterializedQuery) {
+    return new CommandId(
+        Type.MATERIALIZED_VIEW,
+        dropMaterializedQuery.getName().getSuffix(),
         CommandId.Action.DROP
     );
   }

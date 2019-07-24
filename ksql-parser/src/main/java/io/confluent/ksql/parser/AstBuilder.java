@@ -50,6 +50,7 @@ import io.confluent.ksql.parser.tree.CreateTableAsSelect;
 import io.confluent.ksql.parser.tree.DecimalLiteral;
 import io.confluent.ksql.parser.tree.DereferenceExpression;
 import io.confluent.ksql.parser.tree.DescribeFunction;
+import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.parser.tree.DropStream;
 import io.confluent.ksql.parser.tree.DropTable;
 import io.confluent.ksql.parser.tree.Explain;
@@ -69,6 +70,7 @@ import io.confluent.ksql.parser.tree.JoinCriteria;
 import io.confluent.ksql.parser.tree.JoinOn;
 import io.confluent.ksql.parser.tree.LikePredicate;
 import io.confluent.ksql.parser.tree.ListFunctions;
+import io.confluent.ksql.parser.tree.ListMaterialized;
 import io.confluent.ksql.parser.tree.ListProperties;
 import io.confluent.ksql.parser.tree.ListQueries;
 import io.confluent.ksql.parser.tree.ListStreams;
@@ -340,6 +342,15 @@ public class AstBuilder {
     }
 
     @Override
+    public Node visitDropMaterialized(final SqlBaseParser.DropMaterializedContext context) {
+      return new DropMaterialized(
+          getLocation(context),
+          ParserUtil.getQualifiedName(context.qualifiedName()),
+          context.EXISTS() != null
+      );
+    }
+
+    @Override
     public Query visitQuery(final SqlBaseParser.QueryContext context) {
       final Relation from = (Relation) visit(context.from);
 
@@ -571,6 +582,11 @@ public class AstBuilder {
     public Node visitListTables(final SqlBaseParser.ListTablesContext context) {
       return new ListTables(
           getLocation(context), context.EXTENDED() != null);
+    }
+
+    @Override
+    public Node visitListMaterialized(final SqlBaseParser.ListMaterializedContext context) {
+      return new ListMaterialized(getLocation(context));
     }
 
     @Override

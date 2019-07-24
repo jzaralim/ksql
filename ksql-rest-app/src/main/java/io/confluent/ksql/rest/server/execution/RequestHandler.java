@@ -20,6 +20,7 @@ import io.confluent.ksql.engine.KsqlEngine;
 import io.confluent.ksql.parser.KsqlParser.ParsedStatement;
 import io.confluent.ksql.parser.KsqlParser.PreparedStatement;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
+import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.parser.tree.RunScript;
 import io.confluent.ksql.parser.tree.Statement;
 import io.confluent.ksql.rest.entity.KsqlEntity;
@@ -106,18 +107,17 @@ public class RequestHandler {
     final Class<? extends Statement> statementClass = configured.getStatement().getClass();
     commandQueueSync.waitFor(new KsqlEntityList(entities), statementClass);
 
-    if (statementClass == CreateMaterializedView.class) {
-      ((StatementExecutor<T>) distributor).execute(configured, ksqlEngine, serviceContext);
-    }
-
     final StatementExecutor<T> executor = (StatementExecutor<T>)
         customExecutors.getOrDefault(statementClass, distributor);
 
-    return executor.execute(
-        configured,
-        ksqlEngine,
-        serviceContext
-    );
+    Optional<KsqlEntity> result = executor.execute(configured, ksqlEngine, serviceContext);
+
+    if (statementClass == CreateMaterializedView.class
+        || statementClass == DropMaterialized.class) {
+      result = ((StatementExecutor<T>) distributor).execute(configured, ksqlEngine, serviceContext);
+    }
+
+    return result;
   }
 
   private KsqlEntityList executeRunScript(

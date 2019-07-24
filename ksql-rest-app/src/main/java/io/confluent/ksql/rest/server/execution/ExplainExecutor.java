@@ -16,22 +16,36 @@
 package io.confluent.ksql.rest.server.execution;
 
 import io.confluent.ksql.KsqlExecutionContext;
+import io.confluent.ksql.metastore.model.DataSource;
+import io.confluent.ksql.metastore.model.MaterializedView;
 import io.confluent.ksql.parser.KsqlParser.PreparedStatement;
+import io.confluent.ksql.parser.tree.AliasedRelation;
 import io.confluent.ksql.parser.tree.Explain;
 import io.confluent.ksql.parser.tree.Query;
 import io.confluent.ksql.parser.tree.QueryContainer;
+import io.confluent.ksql.parser.tree.SelectItem;
+import io.confluent.ksql.parser.tree.SingleColumn;
 import io.confluent.ksql.parser.tree.Statement;
 import io.confluent.ksql.query.QueryId;
+import io.confluent.ksql.rest.entity.FieldInfo;
 import io.confluent.ksql.rest.entity.KsqlEntity;
 import io.confluent.ksql.rest.entity.QueryDescription;
 import io.confluent.ksql.rest.entity.QueryDescriptionEntity;
+import io.confluent.ksql.rest.entity.SchemaInfo;
+import io.confluent.ksql.schema.ksql.SqlBaseType;
 import io.confluent.ksql.services.ServiceContext;
 import io.confluent.ksql.statement.ConfiguredStatement;
 import io.confluent.ksql.util.KsqlException;
 import io.confluent.ksql.util.KsqlStatementException;
 import io.confluent.ksql.util.PersistentQueryMetadata;
 import io.confluent.ksql.util.QueryMetadata;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+
+import org.apache.kafka.connect.data.Field;
 
 /**
  * Explains the execution of either an existing persistent query or a statement
@@ -39,7 +53,8 @@ import java.util.Optional;
  */
 public final class ExplainExecutor {
 
-  private ExplainExecutor() { }
+  private ExplainExecutor() {
+  }
 
   public static Optional<KsqlEntity> execute(
       final ConfiguredStatement<Explain> statement,
@@ -96,6 +111,18 @@ public final class ExplainExecutor {
         explain.getStatementText().substring("EXPLAIN ".length()),
         statement);
 
+    if (statement instanceof Query) {
+      final DataSource<?> dataSource = executionContext
+          .getMetaStore()
+          .getSource(
+              ((AliasedRelation) ((Query) statement).getFrom()).getAlias()
+          );
+
+      if (dataSource.getDataSourceType() == DataSource.DataSourceType.MATERIALIZED) {
+        return getMaterializedDescription((MaterializedView<?>) dataSource, (Query) statement);
+      }
+    }
+
     final QueryMetadata metadata = executionContext.createSandbox(serviceContext)
         .execute(
             serviceContext,
@@ -105,6 +132,48 @@ public final class ExplainExecutor {
             new IllegalStateException("The provided statement did not run a ksql query"));
 
     return QueryDescription.forQueryMetadata(metadata);
+  }
+
+  private static QueryDescription getMaterializedDescription(
+      final MaterializedView<?> dataSource,
+      final Query query) {
+    // Yes, it's a hack to get the headers. I'm sorry.
+    final SchemaInfo fakeInfo = new SchemaInfo(SqlBaseType.BOOLEAN, Collections.emptyList(), null);
+    final List<FieldInfo> fieldInfoList = new ArrayList<>();
+    for (final SelectItem item : query.getSelect().getSelectItems()) {
+      if (item instanceof SingleColumn) {
+        fieldInfoList.add(
+            new FieldInfo(
+                ((SingleColumn) item).getAlias(),
+                fakeInfo
+            )
+        );
+      } else {
+        for (Field field : dataSource.getSchema().valueSchema().fields()) {
+          fieldInfoList.add(
+              new FieldInfo(
+                  field.name(),
+                  fakeInfo
+              )
+          );
+        }
+      }
+    }
+
+    if (dataSource.isWindowed()) {
+      fieldInfoList.add(new FieldInfo("WindowedKey", fakeInfo));
+    }
+
+    return new QueryDescription(
+        null,
+        null,
+        fieldInfoList,
+        Collections.emptySet(),
+        Collections.emptySet(),
+        null,
+        null,
+        Collections.emptyMap()
+    );
   }
 
   private static QueryDescription explainQuery(

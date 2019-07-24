@@ -22,6 +22,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.confluent.ksql.metastore.model.KsqlStream;
 import io.confluent.ksql.metastore.model.KsqlTable;
+import io.confluent.ksql.metastore.model.MaterializedView;
+import io.confluent.ksql.rest.entity.SourceInfo.Materialized;
 import io.confluent.ksql.rest.entity.SourceInfo.Stream;
 import io.confluent.ksql.rest.entity.SourceInfo.Table;
 import java.util.Objects;
@@ -31,6 +33,7 @@ import java.util.Objects;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "STREAM", value = Stream.class),
     @JsonSubTypes.Type(name = "TABLE", value = Table.class),
+    @JsonSubTypes.Type(name = "MATERIALIZED", value = Materialized.class),
     })
 public class SourceInfo {
   private final String name;
@@ -104,6 +107,55 @@ public class SourceInfo {
       }
       final Table table = (Table) o;
       return isWindowed == table.isWindowed;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(super.hashCode(), isWindowed);
+    }
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  public static class Materialized extends SourceInfo {
+    private final boolean isWindowed;
+
+    @JsonCreator
+    public Materialized(
+        @JsonProperty("name") final String name,
+        @JsonProperty("topic") final String topic,
+        @JsonProperty("format") final String format,
+        @JsonProperty("isWindowed") final Boolean isWindowed
+    ) {
+      super(name, topic, format);
+      this.isWindowed = isWindowed;
+    }
+
+    public Materialized(final MaterializedView<?> materializedView) {
+      this(
+          materializedView.getName(),
+          materializedView.getKsqlTopic().getKafkaTopicName(),
+          materializedView.getKsqlTopic().getValueSerdeFactory().getFormat().name(),
+          materializedView.isWindowed()
+      );
+    }
+
+    public boolean getIsWindowed() {
+      return isWindowed;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      if (!super.equals(o)) {
+        return false;
+      }
+      final Materialized materialized = (Materialized) o;
+      return isWindowed == materialized.isWindowed;
     }
 
     @Override

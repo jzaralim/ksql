@@ -37,6 +37,7 @@ statement
     | (LIST | SHOW) TOPICS                                                  #listTopics
     | (LIST | SHOW) STREAMS EXTENDED?                                       #listStreams
     | (LIST | SHOW) TABLES EXTENDED?                                        #listTables
+    | (LIST | SHOW) MATERIALIZED                                            #listMaterialized
     | (LIST | SHOW) FUNCTIONS                                               #listFunctions
     | DESCRIBE EXTENDED? qualifiedName                                      #showColumns
     | DESCRIBE FUNCTION qualifiedName                                       #describeFunction
@@ -56,11 +57,13 @@ statement
                     (WITH tableProperties)?                                 #createTable
     | CREATE TABLE (IF NOT EXISTS)? qualifiedName
             (WITH tableProperties)? AS query                                #createTableAs
-    | CREATE MATERIALIZED VIEW identifier AS SELECT ASTERISK FROM identifier       #createMaterializedView
+    | CREATE MATERIALIZED VIEW identifier AS SELECT ASTERISK
+            FROM identifier                                                 #createMaterializedView
     | INSERT INTO qualifiedName query (PARTITION BY identifier)?            #insertInto
     | INSERT INTO qualifiedName (columns)? VALUES values                    #insertValues
     | DROP STREAM (IF EXISTS)? qualifiedName (DELETE TOPIC)?                #dropStream
     | DROP TABLE (IF EXISTS)? qualifiedName  (DELETE TOPIC)?                #dropTable
+    | DROP MATERIALIZED (IF EXISTS)? qualifiedName                          #dropMaterialized
     | EXPLAIN  (statement | qualifiedName)                                  #explain
     | RUN SCRIPT STRING                                                     #runScript
     ;

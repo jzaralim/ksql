@@ -57,6 +57,9 @@ public class DropSourceCommand implements DdlCommand {
       ));
     }
 
+    if (dataSourceType == DataSourceType.MATERIALIZED) {
+      metaStore.removeConnector(sourceName);
+    }
     metaStore.deleteSource(sourceName);
 
     return new DdlCommandResult(true,

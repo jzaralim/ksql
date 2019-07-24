@@ -20,9 +20,11 @@ import io.confluent.ksql.KsqlExecutionContext;
 import io.confluent.ksql.engine.InsertValuesExecutor;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.DescribeFunction;
+import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.parser.tree.Explain;
 import io.confluent.ksql.parser.tree.InsertValues;
 import io.confluent.ksql.parser.tree.ListFunctions;
+import io.confluent.ksql.parser.tree.ListMaterialized;
 import io.confluent.ksql.parser.tree.ListProperties;
 import io.confluent.ksql.parser.tree.ListQueries;
 import io.confluent.ksql.parser.tree.ListStreams;
@@ -62,10 +64,12 @@ public enum CustomValidators {
   LIST_TOPICS(ListTopics.class, StatementValidator.NO_VALIDATION),
   LIST_STREAMS(ListStreams.class, StatementValidator.NO_VALIDATION),
   LIST_TABLES(ListTables.class, StatementValidator.NO_VALIDATION),
+  LIST_MATERIALIZED(ListMaterialized.class, StatementValidator.NO_VALIDATION),
   LIST_FUNCTIONS(ListFunctions.class, StatementValidator.NO_VALIDATION),
   LIST_QUERIES(ListQueries.class, StatementValidator.NO_VALIDATION),
   LIST_PROPERTIES(ListProperties.class, StatementValidator.NO_VALIDATION),
   INSERT_VALUES(InsertValues.class, new InsertValuesExecutor()::execute),
+  DROP_MATERIALIZED(DropMaterialized.class, StatementValidator.NO_VALIDATION),
   CREATE_MATERIALIZED_VIEW(CreateMaterializedView.class, StatementValidator.NO_VALIDATION),
 
   SHOW_COLUMNS(ShowColumns.class, ListSourceExecutor::columns),

@@ -28,6 +28,7 @@ import io.confluent.ksql.parser.tree.CreateStream;
 import io.confluent.ksql.parser.tree.CreateStreamAsSelect;
 import io.confluent.ksql.parser.tree.CreateTable;
 import io.confluent.ksql.parser.tree.CreateTableAsSelect;
+import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.parser.tree.DropStatement;
 import io.confluent.ksql.parser.tree.DropStream;
 import io.confluent.ksql.parser.tree.DropTable;
@@ -326,6 +327,12 @@ public final class SqlFormatter {
     @Override
     protected Void visitDropTable(final DropTable node, final Integer context) {
       visitDrop(node, "TABLE");
+      return null;
+    }
+
+    @Override
+    protected Void visitDropMaterialized(final DropMaterialized node, final Integer context) {
+      visitDrop(node, "MATERIALIZED");
       return null;
     }
 

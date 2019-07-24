@@ -30,6 +30,7 @@ import io.confluent.ksql.cli.console.table.builder.CommandStatusTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.ExecutionPlanTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.FunctionNameListTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.KafkaTopicsListTableBuilder;
+import io.confluent.ksql.cli.console.table.builder.MaterializedListTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.PropertiesListTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.QueriesTableBuilder;
 import io.confluent.ksql.cli.console.table.builder.StreamsListTableBuilder;
@@ -51,6 +52,7 @@ import io.confluent.ksql.rest.entity.KsqlEntityList;
 import io.confluent.ksql.rest.entity.KsqlErrorMessage;
 import io.confluent.ksql.rest.entity.KsqlStatementErrorMessage;
 import io.confluent.ksql.rest.entity.KsqlWarning;
+import io.confluent.ksql.rest.entity.MaterializedList;
 import io.confluent.ksql.rest.entity.PropertiesList;
 import io.confluent.ksql.rest.entity.Queries;
 import io.confluent.ksql.rest.entity.QueryDescription;
@@ -126,6 +128,8 @@ public class Console implements Closeable {
               tablePrinter(StreamsList.class, StreamsListTableBuilder::new))
           .put(TablesList.class,
               tablePrinter(TablesList.class, TablesListTableBuilder::new))
+          .put(MaterializedList.class,
+              tablePrinter(MaterializedList.class, MaterializedListTableBuilder::new))
           .put(KafkaTopicsList.class,
               tablePrinter(KafkaTopicsList.class, KafkaTopicsListTableBuilder::new))
           .put(ExecutionPlan.class,

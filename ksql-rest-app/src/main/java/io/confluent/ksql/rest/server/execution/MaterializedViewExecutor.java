@@ -20,6 +20,7 @@ import io.confluent.ksql.KsqlExecutionContext;
 import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.metastore.model.KsqlTable;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
+import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.rest.client.KsqlConnectClient;
 import io.confluent.ksql.rest.client.RestResponse;
 import io.confluent.ksql.rest.entity.ConnectRequest;
@@ -33,20 +34,20 @@ import io.confluent.ksql.util.KsqlException;
 
 import java.util.Optional;
 
-public final class CreateMaterializedViewExecutor {
-  private CreateMaterializedViewExecutor() {
+public final class MaterializedViewExecutor {
+  private MaterializedViewExecutor() {
 
   }
 
-  public static Optional<KsqlEntity> execute(
+  public static Optional<KsqlEntity> create(
       final ConfiguredStatement<CreateMaterializedView> statement,
       final KsqlExecutionContext executionContext,
       final ServiceContext serviceContext) {
     final KsqlConfig config = statement.getConfig();
-    return execute(getConnectClient(config), statement, executionContext);
+    return create(getConnectClient(config), statement, executionContext);
   }
 
-  public static Optional<KsqlEntity> execute(
+  public static Optional<KsqlEntity> create(
       final KsqlConnectClient client,
       final ConfiguredStatement<?> statement,
       final KsqlExecutionContext executionContext) {
@@ -66,6 +67,22 @@ public final class CreateMaterializedViewExecutor {
     );
     final RestResponse<ConnectorInfo> response = client.createNewConnector(request);
     return Optional.of(new ConnectorEntity(statement.getStatementText(), response.getResponse()));
+  }
+
+  public static Optional<KsqlEntity> drop(
+      final ConfiguredStatement<DropMaterialized> statement,
+      final KsqlExecutionContext executionContext,
+      final ServiceContext serviceContext) {
+    final KsqlConfig config = statement.getConfig();
+    return drop(getConnectClient(config), statement, executionContext);
+  }
+
+  public static Optional<KsqlEntity> drop(
+      final KsqlConnectClient client,
+      final ConfiguredStatement<?> statement,
+      final KsqlExecutionContext executionContext) {
+    client.deleteConnector(((DropMaterialized) statement.getStatement()).getName().toString());
+    return Optional.empty();
   }
 
   @VisibleForTesting

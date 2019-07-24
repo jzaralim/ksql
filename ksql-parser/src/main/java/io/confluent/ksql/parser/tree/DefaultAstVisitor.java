@@ -265,6 +265,10 @@ public abstract class DefaultAstVisitor<R, C>
     return visitStatement(node, context);
   }
 
+  protected R visitDropMaterialized(final DropMaterialized node, final C context) {
+    return visitStatement(node, context);
+  }
+
   protected R visitGroupBy(final GroupBy node, final C context) {
     return visitNode(node, context);
   }

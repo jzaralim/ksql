@@ -39,7 +39,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 
 @RunWith(MockitoJUnitRunner.class)
-public class CreateMaterializedViewExecutorTest {
+public class MaterializedViewExecutorTest {
   @Rule
   public final TemporaryEngine engine = new TemporaryEngine();
 
@@ -50,6 +50,8 @@ public class CreateMaterializedViewExecutorTest {
   public void init() {
     when(client.createNewConnector(any()))
         .thenReturn(RestResponse.of(new ConnectorInfo("FOO", null, null)));
+    when(client.deleteConnector(anyString()))
+        .thenReturn(RestResponse.of(""));
   }
 
   @Test
@@ -62,11 +64,25 @@ public class CreateMaterializedViewExecutorTest {
     when(engine.getMetaStore()).thenReturn(this.engine.getEngine().getMetaStore());
 
     // When:
-    CreateMaterializedViewExecutor.execute(client, createMaterializedView, engine);
+    MaterializedViewExecutor.create(client, createMaterializedView, engine);
 
     // Then:
     final ArgumentCaptor<ConnectRequest> argument = ArgumentCaptor.forClass(ConnectRequest.class);
     verify(client).createNewConnector(argument.capture());
     assertThat(argument.getValue().getName(), equalTo("FOO"));
+  }
+
+  @Test
+  public void shouldDropMaterializedView() {
+    // Given:
+    final ConfiguredStatement<?> dropMaterializedView = engine.configure("DROP MATERIALIZED FOO;");
+
+    KsqlEngine engine = mock(KsqlEngine.class);
+
+    // When:
+    MaterializedViewExecutor.drop(client, dropMaterializedView, engine);
+
+    // Then:
+    verify(client).deleteConnector("FOO");
   }
 }

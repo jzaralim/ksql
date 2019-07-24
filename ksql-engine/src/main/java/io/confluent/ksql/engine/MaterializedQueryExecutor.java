@@ -87,10 +87,9 @@ public class MaterializedQueryExecutor {
               .create()
               .deserializer()
               .deserialize(dataSource.getKafkaTopicName(), row.getString("rowkey").getBytes(UTF_8));
-          columns.add(windowedKey.window().startTime().getEpochSecond());
-          columns.add(windowedKey.window().endTime().getEpochSecond());
+          columns.add(String.format("%s : Window{start=%d end=%s}",
+              windowedKey.key(), windowedKey.window().start(), windowedKey.window().end()));
         } catch (Exception e) {
-          columns.add(0);
           columns.add(0);
         }
       }

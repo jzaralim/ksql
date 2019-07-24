@@ -20,9 +20,11 @@ import io.confluent.ksql.KsqlExecutionContext;
 import io.confluent.ksql.engine.InsertValuesExecutor;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.DescribeFunction;
+import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.parser.tree.Explain;
 import io.confluent.ksql.parser.tree.InsertValues;
 import io.confluent.ksql.parser.tree.ListFunctions;
+import io.confluent.ksql.parser.tree.ListMaterialized;
 import io.confluent.ksql.parser.tree.ListProperties;
 import io.confluent.ksql.parser.tree.ListQueries;
 import io.confluent.ksql.parser.tree.ListStreams;
@@ -53,6 +55,7 @@ public enum CustomExecutors {
   LIST_TOPICS(ListTopics.class, ListTopicsExecutor::execute),
   LIST_STREAMS(ListStreams.class, ListSourceExecutor::streams),
   LIST_TABLES(ListTables.class, ListSourceExecutor::tables),
+  LIST_MATERIALIZED(ListMaterialized.class, ListSourceExecutor::materialized),
   LIST_FUNCTIONS(ListFunctions.class, ListFunctionsExecutor::execute),
   LIST_QUERIES(ListQueries.class, ListQueriesExecutor::execute),
   LIST_PROPERTIES(ListProperties.class, ListPropertiesExecutor::execute),
@@ -63,7 +66,8 @@ public enum CustomExecutors {
   SET_PROPERTY(SetProperty.class, PropertyExecutor::set),
   UNSET_PROPERTY(UnsetProperty.class, PropertyExecutor::unset),
   INSERT_VALUES(InsertValues.class, insertValuesExecutor()),
-  CREATE_MATERIALIZED_VIEW(CreateMaterializedView.class, CreateMaterializedViewExecutor::execute);
+  DROP_MATERIALIZED(DropMaterialized.class, MaterializedViewExecutor::drop),
+  CREATE_MATERIALIZED_VIEW(CreateMaterializedView.class, MaterializedViewExecutor::create);
 
   public static final Map<Class<? extends Statement>, StatementExecutor<?>> EXECUTOR_MAP =
       ImmutableMap.copyOf(
