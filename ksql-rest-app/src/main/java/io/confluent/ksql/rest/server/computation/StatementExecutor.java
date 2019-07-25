@@ -352,10 +352,10 @@ public class StatementExecutor {
         (CreateMaterializedView) statement.getStatement();
     final MutableMetaStore metaStore = (MutableMetaStore) ksqlEngine.getMetaStore();
     final KsqlTable<?> dataSource =
-        (KsqlTable) metaStore.getSource(createMaterializedView.getSource().toUpperCase());
+        (KsqlTable) metaStore.getSource(createMaterializedView.getSource());
     metaStore.putSource(new MaterializedView<>(
         statement.getStatementText(),
-        createMaterializedView.getMaterializedViewName().toUpperCase(),
+        createMaterializedView.getMaterializedViewName(),
         dataSource.getSchema(),
         dataSource.getSerdeOptions(),
         dataSource.getKeyField(),

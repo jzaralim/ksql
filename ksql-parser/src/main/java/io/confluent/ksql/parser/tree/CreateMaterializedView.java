@@ -35,8 +35,8 @@ public class CreateMaterializedView extends Statement {
       final String source) {
     super(location);
     this.materializedViewName =
-        requireNonNull(materializedViewName, "materializedViewName is null");
-    this.source = requireNonNull(source, "source is null");
+        requireNonNull(materializedViewName, "materializedViewName is null").toUpperCase();
+    this.source = requireNonNull(source, "source is null").toUpperCase();
   }
 
   public String getMaterializedViewName() {
