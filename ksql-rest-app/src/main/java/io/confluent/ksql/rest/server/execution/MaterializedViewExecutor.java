@@ -21,6 +21,8 @@ import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.metastore.model.KsqlTable;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.DropMaterialized;
+import io.confluent.ksql.parser.tree.PauseMaterialized;
+import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.rest.client.KsqlConnectClient;
 import io.confluent.ksql.rest.client.RestResponse;
 import io.confluent.ksql.rest.entity.ConnectRequest;
@@ -82,6 +84,43 @@ public final class MaterializedViewExecutor {
       final ConfiguredStatement<?> statement,
       final KsqlExecutionContext executionContext) {
     client.deleteConnector(((DropMaterialized) statement.getStatement()).getName().toString());
+    return Optional.empty();
+  }
+
+  public static Optional<KsqlEntity> pause(
+      final ConfiguredStatement<PauseMaterialized> statement,
+      final KsqlExecutionContext executionContext,
+      final ServiceContext serviceContext) {
+    final KsqlConfig config = statement.getConfig();
+    return pause(getConnectClient(config), statement, executionContext);
+  }
+
+  public static Optional<KsqlEntity> pause(
+      final KsqlConnectClient client,
+      final ConfiguredStatement<?> statement,
+      final KsqlExecutionContext executionContext) {
+    client.pauseConnector(
+        ((PauseMaterialized) statement.getStatement())
+            .getMaterializedViewName()
+            .getSuffix()
+    );
+    return Optional.empty();
+  }
+
+  public static Optional<KsqlEntity> resume(
+      final ConfiguredStatement<ResumeMaterialized> statement,
+      final KsqlExecutionContext executionContext,
+      final ServiceContext serviceContext) {
+    final KsqlConfig config = statement.getConfig();
+    return resume(getConnectClient(config), statement, executionContext);
+  }
+
+  public static Optional<KsqlEntity> resume(
+      final KsqlConnectClient client,
+      final ConfiguredStatement<?> statement,
+      final KsqlExecutionContext executionContext) {
+    client.resumeConnector(
+        ((ResumeMaterialized) statement.getStatement()).getMaterializedViewName().getSuffix());
     return Optional.empty();
   }
 

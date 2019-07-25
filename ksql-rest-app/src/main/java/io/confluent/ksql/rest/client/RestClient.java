@@ -153,6 +153,21 @@ public class RestClient implements Closeable {
     }
   }
 
+  public <T> RestResponse<T> putRequest(final String path, final Class<T> type) {
+    try (Response response = client.target(serverAddress)
+        .path(path)
+        .request()
+        .put(Entity.json(""))) {
+
+      return response.getStatus() == Response.Status.OK.getStatusCode()
+          || response.getStatus() == Response.Status.ACCEPTED.getStatusCode()
+          ? RestResponse.successful(response.readEntity(type))
+          : createErrorResponse(path, response);
+    } catch (final Exception e) {
+      throw new KsqlRestClientException("Error issuing PUT to KSQL server. path:" + path, e);
+    }
+  }
+
   @Override
   public void close() {
     client.close();

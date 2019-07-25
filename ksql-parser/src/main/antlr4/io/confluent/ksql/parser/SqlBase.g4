@@ -66,6 +66,8 @@ statement
     | DROP MATERIALIZED (IF EXISTS)? qualifiedName                          #dropMaterialized
     | EXPLAIN  (statement | qualifiedName)                                  #explain
     | RUN SCRIPT STRING                                                     #runScript
+    | PAUSE MATERIALIZED qualifiedName                                      #pauseMaterialized
+    | RESUME MATERIALIZED qualifiedName                                     #resumeMaterialized
     ;
 
 query
@@ -434,6 +436,8 @@ DECIMAL: 'DECIMAL';
 MATERIALIZED: 'MATERIALIZED';
 VIEW: 'VIEW';
 KEY: 'KEY';
+PAUSE: 'PAUSE';
+RESUME: 'RESUME';
 
 IF: 'IF';
 

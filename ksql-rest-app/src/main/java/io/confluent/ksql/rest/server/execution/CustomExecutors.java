@@ -30,6 +30,8 @@ import io.confluent.ksql.parser.tree.ListQueries;
 import io.confluent.ksql.parser.tree.ListStreams;
 import io.confluent.ksql.parser.tree.ListTables;
 import io.confluent.ksql.parser.tree.ListTopics;
+import io.confluent.ksql.parser.tree.PauseMaterialized;
+import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.parser.tree.SetProperty;
 import io.confluent.ksql.parser.tree.ShowColumns;
 import io.confluent.ksql.parser.tree.Statement;
@@ -67,6 +69,8 @@ public enum CustomExecutors {
   UNSET_PROPERTY(UnsetProperty.class, PropertyExecutor::unset),
   INSERT_VALUES(InsertValues.class, insertValuesExecutor()),
   DROP_MATERIALIZED(DropMaterialized.class, MaterializedViewExecutor::drop),
+  STOP_MATERIALIZED(PauseMaterialized.class, MaterializedViewExecutor::pause),
+  RESTART_MATERIALIZED(ResumeMaterialized.class, MaterializedViewExecutor::resume),
   CREATE_MATERIALIZED_VIEW(CreateMaterializedView.class, MaterializedViewExecutor::create);
 
   public static final Map<Class<? extends Statement>, StatementExecutor<?>> EXECUTOR_MAP =

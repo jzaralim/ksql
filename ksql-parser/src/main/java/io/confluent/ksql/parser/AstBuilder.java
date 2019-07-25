@@ -82,11 +82,13 @@ import io.confluent.ksql.parser.tree.Node;
 import io.confluent.ksql.parser.tree.NodeLocation;
 import io.confluent.ksql.parser.tree.NotExpression;
 import io.confluent.ksql.parser.tree.NullLiteral;
+import io.confluent.ksql.parser.tree.PauseMaterialized;
 import io.confluent.ksql.parser.tree.PrintTopic;
 import io.confluent.ksql.parser.tree.QualifiedName;
 import io.confluent.ksql.parser.tree.QualifiedNameReference;
 import io.confluent.ksql.parser.tree.Query;
 import io.confluent.ksql.parser.tree.Relation;
+import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.parser.tree.RunScript;
 import io.confluent.ksql.parser.tree.SearchedCaseExpression;
 import io.confluent.ksql.parser.tree.Select;
@@ -1021,6 +1023,22 @@ public class AstBuilder {
           getLocation(context),
           (Expression) visit(context.condition),
           (Expression) visit(context.result)
+      );
+    }
+
+    @Override
+    public Node visitPauseMaterialized(final SqlBaseParser.PauseMaterializedContext context) {
+      return new PauseMaterialized(
+          getLocation(context),
+          ParserUtil.getQualifiedName(context.qualifiedName())
+      );
+    }
+
+    @Override
+    public Node visitResumeMaterialized(final SqlBaseParser.ResumeMaterializedContext context) {
+      return new ResumeMaterialized(
+          getLocation(context),
+          ParserUtil.getQualifiedName(context.qualifiedName())
       );
     }
 

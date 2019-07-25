@@ -25,6 +25,8 @@ import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.parser.tree.DropStream;
 import io.confluent.ksql.parser.tree.DropTable;
 import io.confluent.ksql.parser.tree.InsertInto;
+import io.confluent.ksql.parser.tree.PauseMaterialized;
+import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.parser.tree.Statement;
 import io.confluent.ksql.parser.tree.TerminateQuery;
 import io.confluent.ksql.rest.server.computation.CommandId.Action;
@@ -62,6 +64,10 @@ public class CommandIdAssigner {
             command -> new CommandId(Type.CLUSTER, "TerminateCluster", Action.TERMINATE))
           .put(CreateMaterializedView.class,
               command -> getCreateMaterializedViewCommandId((CreateMaterializedView) command))
+          .put(PauseMaterialized.class,
+              command -> getPauseMaterializedCommandId((PauseMaterialized) command))
+          .put(ResumeMaterialized.class,
+              command -> getResumeMaterializedCommandId((ResumeMaterialized) command))
           .build();
 
   public CommandIdAssigner() {
@@ -151,6 +157,24 @@ public class CommandIdAssigner {
         CommandId.Type.MATERIALIZED_VIEW,
         createMaterializedView.getMaterializedViewName(),
         CommandId.Action.CREATE
+    );
+  }
+
+  private static CommandId getPauseMaterializedCommandId(
+      final PauseMaterialized pauseMaterializedView) {
+    return new CommandId(
+        CommandId.Type.MATERIALIZED_VIEW,
+        pauseMaterializedView.getMaterializedViewName().getSuffix(),
+        CommandId.Action.PAUSE
+    );
+  }
+
+  private static CommandId getResumeMaterializedCommandId(
+      final ResumeMaterialized resumeMaterializedView) {
+    return new CommandId(
+        CommandId.Type.MATERIALIZED_VIEW,
+        resumeMaterializedView.getMaterializedViewName().getSuffix(),
+        CommandId.Action.RESUME
     );
   }
 }

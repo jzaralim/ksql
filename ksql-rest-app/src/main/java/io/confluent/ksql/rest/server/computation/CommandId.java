@@ -40,7 +40,9 @@ public class CommandId {
     CREATE,
     DROP,
     EXECUTE,
-    TERMINATE
+    TERMINATE,
+    PAUSE,
+    RESUME
   }
 
   public CommandId(

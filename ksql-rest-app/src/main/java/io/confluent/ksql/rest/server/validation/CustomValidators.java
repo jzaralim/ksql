@@ -30,8 +30,10 @@ import io.confluent.ksql.parser.tree.ListQueries;
 import io.confluent.ksql.parser.tree.ListStreams;
 import io.confluent.ksql.parser.tree.ListTables;
 import io.confluent.ksql.parser.tree.ListTopics;
+import io.confluent.ksql.parser.tree.PauseMaterialized;
 import io.confluent.ksql.parser.tree.PrintTopic;
 import io.confluent.ksql.parser.tree.Query;
+import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.parser.tree.SetProperty;
 import io.confluent.ksql.parser.tree.ShowColumns;
 import io.confluent.ksql.parser.tree.Statement;
@@ -70,6 +72,8 @@ public enum CustomValidators {
   LIST_PROPERTIES(ListProperties.class, StatementValidator.NO_VALIDATION),
   INSERT_VALUES(InsertValues.class, new InsertValuesExecutor()::execute),
   DROP_MATERIALIZED(DropMaterialized.class, StatementValidator.NO_VALIDATION),
+  STOP_MATERIALIZED(PauseMaterialized.class, StatementValidator.NO_VALIDATION),
+  RESTART_MATERIALIZED(ResumeMaterialized.class, StatementValidator.NO_VALIDATION),
   CREATE_MATERIALIZED_VIEW(CreateMaterializedView.class, StatementValidator.NO_VALIDATION),
 
   SHOW_COLUMNS(ShowColumns.class, ListSourceExecutor::columns),

@@ -59,4 +59,12 @@ public class KsqlConnectClient {
   public RestResponse<String> deleteConnector(final String connector) {
     return client.deleteRequest(String.format("/connectors/%s", connector), String.class);
   }
+
+  public RestResponse<String> pauseConnector(final String connector) {
+    return client.putRequest(String.format("/connectors/%s/pause", connector), String.class);
+  }
+
+  public RestResponse<String> resumeConnector(final String connector) {
+    return client.putRequest(String.format("/connectors/%s/resume", connector), String.class);
+  }
 }
