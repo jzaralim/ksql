@@ -17,6 +17,7 @@ package io.confluent.ksql.rest.server.execution;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.confluent.ksql.KsqlExecutionContext;
+import io.confluent.ksql.metastore.MetaStore;
 import io.confluent.ksql.metastore.model.DataSource;
 import io.confluent.ksql.metastore.model.KsqlTable;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
@@ -58,9 +59,11 @@ public final class MaterializedViewExecutor {
         .getMetaStore()
         .getSource(((CreateMaterializedView) statement.getStatement()).getSource());
 
-    if (!(dataSource instanceof KsqlTable)) {
-      throw new KsqlException("Materialized views are only supported for tables.");
-    }
+    verifyDatasource(
+        dataSource.getName(),
+        executionContext.getMetaStore(),
+        DataSource.DataSourceType.KTABLE
+    );
 
     final ConnectRequest request = new ConnectRequest(
         ((CreateMaterializedView) statement.getStatement()).getMaterializedViewName(),
@@ -83,7 +86,14 @@ public final class MaterializedViewExecutor {
       final KsqlConnectClient client,
       final ConfiguredStatement<?> statement,
       final KsqlExecutionContext executionContext) {
-    client.deleteConnector(((DropMaterialized) statement.getStatement()).getName().toString());
+    final String materializedViewName =
+        ((DropMaterialized) statement.getStatement()).getName().toString();
+    verifyDatasource(
+        materializedViewName,
+        executionContext.getMetaStore(),
+        DataSource.DataSourceType.MATERIALIZED
+    );
+    client.deleteConnector(materializedViewName);
     return Optional.empty();
   }
 
@@ -99,11 +109,16 @@ public final class MaterializedViewExecutor {
       final KsqlConnectClient client,
       final ConfiguredStatement<?> statement,
       final KsqlExecutionContext executionContext) {
-    client.pauseConnector(
+    final String materializedViewName =
         ((PauseMaterialized) statement.getStatement())
-            .getMaterializedViewName()
-            .getSuffix()
+        .getMaterializedViewName()
+        .getSuffix();
+    verifyDatasource(
+        materializedViewName,
+        executionContext.getMetaStore(),
+        DataSource.DataSourceType.MATERIALIZED
     );
+    client.pauseConnector(materializedViewName);
     return Optional.empty();
   }
 
@@ -119,8 +134,14 @@ public final class MaterializedViewExecutor {
       final KsqlConnectClient client,
       final ConfiguredStatement<?> statement,
       final KsqlExecutionContext executionContext) {
-    client.resumeConnector(
-        ((ResumeMaterialized) statement.getStatement()).getMaterializedViewName().getSuffix());
+    final String materializedViewName =
+        ((ResumeMaterialized) statement.getStatement()).getMaterializedViewName().getSuffix();
+    verifyDatasource(
+        materializedViewName,
+        executionContext.getMetaStore(),
+        DataSource.DataSourceType.MATERIALIZED
+    );
+    client.resumeConnector(materializedViewName);
     return Optional.empty();
   }
 
@@ -131,5 +152,24 @@ public final class MaterializedViewExecutor {
             .getAllConfigPropsWithSecretsObfuscated()
             .get(KsqlConfig.CONNECT_URL_PROPERTY)
     );
+  }
+
+  private static void verifyDatasource(
+      final String dataSourceName,
+      final MetaStore metaStore,
+      final DataSource.DataSourceType type) {
+    final DataSource<?> dataSource = metaStore.getSource(dataSourceName);
+
+    if (dataSource == null) {
+      throw new KsqlException(String.format("Unknown materialized view %s", dataSourceName));
+    } else if (dataSource.getDataSourceType() != type) {
+      throw new KsqlException(
+          String.format(
+              "Incompatible data type; got %s, expected %s",
+              dataSource.getDataSourceType().getKsqlType(),
+              type.getKsqlType())
+      );
+    }
+
   }
 }
