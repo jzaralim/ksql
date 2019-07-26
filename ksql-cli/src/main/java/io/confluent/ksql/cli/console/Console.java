@@ -41,6 +41,7 @@ import io.confluent.ksql.json.JsonMapper;
 import io.confluent.ksql.rest.entity.ArgumentInfo;
 import io.confluent.ksql.rest.entity.CommandStatusEntity;
 import io.confluent.ksql.rest.entity.ConnectorEntity;
+import io.confluent.ksql.rest.entity.ConnectorStatusEntity;
 import io.confluent.ksql.rest.entity.ExecutionPlan;
 import io.confluent.ksql.rest.entity.FieldInfo;
 import io.confluent.ksql.rest.entity.FunctionDescriptionList;
@@ -138,8 +139,8 @@ public class Console implements Closeable {
               tablePrinter(FunctionNameList.class, FunctionNameListTableBuilder::new))
           .put(FunctionDescriptionList.class,
               Console::printFunctionDescription)
-          .put(ConnectorEntity.class,
-              Console::printConnectorInfo)
+          .put(ConnectorEntity.class, Console::printConnectorInfo)
+          .put(ConnectorStatusEntity.class, Console::printConnectorStatus)
           .build();
 
   private static <T extends KsqlEntity> Handler1<KsqlEntity, Console> tablePrinter(
@@ -677,6 +678,12 @@ public class Console implements Closeable {
   private void printConnectorInfo(final ConnectorEntity connectorEntity) {
     writer().printf("Materialized view %s has been created%n",
         connectorEntity.getConnectorInfo().getName());
+  }
+
+  private void printConnectorStatus(final ConnectorStatusEntity connectorStatusEntity) {
+    writer().printf("Materialized view %s is %s%n",
+        connectorStatusEntity.getConnectorStatus().getName(),
+        connectorStatusEntity.getConnectorStatus().getConnector().get("state"));
   }
 
   private static String argToString(final ArgumentInfo arg) {

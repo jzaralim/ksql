@@ -37,6 +37,7 @@ import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.parser.tree.SetProperty;
 import io.confluent.ksql.parser.tree.ShowColumns;
 import io.confluent.ksql.parser.tree.Statement;
+import io.confluent.ksql.parser.tree.StatusMaterialized;
 import io.confluent.ksql.parser.tree.TerminateQuery;
 import io.confluent.ksql.parser.tree.UnsetProperty;
 import io.confluent.ksql.rest.server.execution.DescribeFunctionExecutor;
@@ -74,6 +75,7 @@ public enum CustomValidators {
   DROP_MATERIALIZED(DropMaterialized.class, StatementValidator.NO_VALIDATION),
   STOP_MATERIALIZED(PauseMaterialized.class, StatementValidator.NO_VALIDATION),
   RESTART_MATERIALIZED(ResumeMaterialized.class, StatementValidator.NO_VALIDATION),
+  STATUS_MATERIALIZED(StatusMaterialized.class, StatementValidator.NO_VALIDATION),
   CREATE_MATERIALIZED_VIEW(CreateMaterializedView.class, StatementValidator.NO_VALIDATION),
 
   SHOW_COLUMNS(ShowColumns.class, ListSourceExecutor::columns),

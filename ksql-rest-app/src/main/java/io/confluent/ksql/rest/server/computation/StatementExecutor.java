@@ -29,6 +29,8 @@ import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.CreateTableAsSelect;
 import io.confluent.ksql.parser.tree.ExecutableDdlStatement;
 import io.confluent.ksql.parser.tree.InsertInto;
+import io.confluent.ksql.parser.tree.PauseMaterialized;
+import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.parser.tree.RunScript;
 import io.confluent.ksql.parser.tree.TerminateQuery;
 import io.confluent.ksql.query.QueryId;
@@ -208,7 +210,17 @@ public class StatementExecutor {
       handleLegacyRunScript(command, mode);
     } else if (statement.getStatement() instanceof CreateMaterializedView) {
       addMaterializedViewToMetaStore(statement);
-      successMessage = "Materialized view " + " is ready";
+      successMessage = "Materialized view "
+          + ((CreateMaterializedView) statement.getStatement()).getMaterializedViewName()
+          + " is ready";
+    } else if (statement.getStatement() instanceof PauseMaterialized) {
+      successMessage = "Materialized view "
+          + ((PauseMaterialized) statement.getStatement()).getMaterializedViewName().getSuffix()
+          + " paused";
+    } else if (statement.getStatement() instanceof ResumeMaterialized) {
+      successMessage = "Materialized view "
+          + ((ResumeMaterialized) statement.getStatement()).getMaterializedViewName().getSuffix()
+          + " resumed";
     } else {
       throw new KsqlException(String.format(
           "Unexpected statement type: %s",

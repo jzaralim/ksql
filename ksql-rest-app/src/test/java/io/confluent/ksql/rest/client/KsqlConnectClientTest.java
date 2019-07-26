@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import io.confluent.ksql.rest.entity.ConnectRequest;
 import io.confluent.ksql.rest.entity.ConnectorInfo;
 import io.confluent.ksql.rest.entity.ConnectorList;
+import io.confluent.ksql.rest.entity.ConnectorStatus;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,8 +39,8 @@ public class KsqlConnectClientTest {
 
   @Test
   public void shouldGetConnectorInfo() {
-    client.getConnectorInfo("bar").getResponse();
-    verify(restClient).getRequest("/connectors/bar", ConnectorInfo.class);
+    client.getConnectorStatus("bar").getResponse();
+    verify(restClient).getRequest("/connectors/bar/status", ConnectorStatus.class);
   }
 
   @Test

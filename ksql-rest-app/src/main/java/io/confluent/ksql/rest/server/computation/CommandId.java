@@ -42,7 +42,8 @@ public class CommandId {
     EXECUTE,
     TERMINATE,
     PAUSE,
-    RESUME
+    RESUME,
+    STATUS
   }
 
   public CommandId(

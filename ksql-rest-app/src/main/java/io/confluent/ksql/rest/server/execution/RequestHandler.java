@@ -21,6 +21,8 @@ import io.confluent.ksql.parser.KsqlParser.ParsedStatement;
 import io.confluent.ksql.parser.KsqlParser.PreparedStatement;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.DropMaterialized;
+import io.confluent.ksql.parser.tree.PauseMaterialized;
+import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.parser.tree.RunScript;
 import io.confluent.ksql.parser.tree.Statement;
 import io.confluent.ksql.rest.entity.KsqlEntity;
@@ -113,7 +115,9 @@ public class RequestHandler {
     Optional<KsqlEntity> result = executor.execute(configured, ksqlEngine, serviceContext);
 
     if (statementClass == CreateMaterializedView.class
-        || statementClass == DropMaterialized.class) {
+        || statementClass == DropMaterialized.class
+        || statementClass == PauseMaterialized.class
+        || statementClass == ResumeMaterialized.class) {
       result = ((StatementExecutor<T>) distributor).execute(configured, ksqlEngine, serviceContext);
     }
 

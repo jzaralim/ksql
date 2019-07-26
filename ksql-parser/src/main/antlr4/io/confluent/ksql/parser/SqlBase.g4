@@ -68,6 +68,7 @@ statement
     | RUN SCRIPT STRING                                                     #runScript
     | PAUSE MATERIALIZED qualifiedName                                      #pauseMaterialized
     | RESUME MATERIALIZED qualifiedName                                     #resumeMaterialized
+    | STATUS MATERIALIZED qualifiedName                                     #statusMaterialized
     ;
 
 query
@@ -438,6 +439,7 @@ VIEW: 'VIEW';
 KEY: 'KEY';
 PAUSE: 'PAUSE';
 RESUME: 'RESUME';
+STATUS: 'STATUS';
 
 IF: 'IF';
 

@@ -101,6 +101,7 @@ import io.confluent.ksql.parser.tree.SimpleGroupBy;
 import io.confluent.ksql.parser.tree.SingleColumn;
 import io.confluent.ksql.parser.tree.Statement;
 import io.confluent.ksql.parser.tree.Statements;
+import io.confluent.ksql.parser.tree.StatusMaterialized;
 import io.confluent.ksql.parser.tree.StringLiteral;
 import io.confluent.ksql.parser.tree.SubscriptExpression;
 import io.confluent.ksql.parser.tree.Table;
@@ -1037,6 +1038,14 @@ public class AstBuilder {
     @Override
     public Node visitResumeMaterialized(final SqlBaseParser.ResumeMaterializedContext context) {
       return new ResumeMaterialized(
+          getLocation(context),
+          ParserUtil.getQualifiedName(context.qualifiedName())
+      );
+    }
+
+    @Override
+    public Node visitStatusMaterialized(final SqlBaseParser.StatusMaterializedContext context) {
+      return new StatusMaterialized(
           getLocation(context),
           ParserUtil.getQualifiedName(context.qualifiedName())
       );

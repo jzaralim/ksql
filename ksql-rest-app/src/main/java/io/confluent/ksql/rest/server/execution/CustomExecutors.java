@@ -35,6 +35,7 @@ import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.parser.tree.SetProperty;
 import io.confluent.ksql.parser.tree.ShowColumns;
 import io.confluent.ksql.parser.tree.Statement;
+import io.confluent.ksql.parser.tree.StatusMaterialized;
 import io.confluent.ksql.parser.tree.UnsetProperty;
 import io.confluent.ksql.rest.entity.KsqlEntity;
 import io.confluent.ksql.services.ServiceContext;
@@ -71,6 +72,7 @@ public enum CustomExecutors {
   DROP_MATERIALIZED(DropMaterialized.class, MaterializedViewExecutor::drop),
   STOP_MATERIALIZED(PauseMaterialized.class, MaterializedViewExecutor::pause),
   RESTART_MATERIALIZED(ResumeMaterialized.class, MaterializedViewExecutor::resume),
+  STATUS_MATERIALIZED(StatusMaterialized.class, MaterializedViewExecutor::status),
   CREATE_MATERIALIZED_VIEW(CreateMaterializedView.class, MaterializedViewExecutor::create);
 
   public static final Map<Class<? extends Statement>, StatementExecutor<?>> EXECUTOR_MAP =

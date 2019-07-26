@@ -28,6 +28,7 @@ import io.confluent.ksql.parser.tree.InsertInto;
 import io.confluent.ksql.parser.tree.PauseMaterialized;
 import io.confluent.ksql.parser.tree.ResumeMaterialized;
 import io.confluent.ksql.parser.tree.Statement;
+import io.confluent.ksql.parser.tree.StatusMaterialized;
 import io.confluent.ksql.parser.tree.TerminateQuery;
 import io.confluent.ksql.rest.server.computation.CommandId.Action;
 import io.confluent.ksql.rest.server.computation.CommandId.Type;
@@ -68,6 +69,8 @@ public class CommandIdAssigner {
               command -> getPauseMaterializedCommandId((PauseMaterialized) command))
           .put(ResumeMaterialized.class,
               command -> getResumeMaterializedCommandId((ResumeMaterialized) command))
+          .put(StatusMaterialized.class,
+              command -> getStatusMaterializedCommandId((StatusMaterialized) command))
           .build();
 
   public CommandIdAssigner() {
@@ -175,6 +178,15 @@ public class CommandIdAssigner {
         CommandId.Type.MATERIALIZED_VIEW,
         resumeMaterializedView.getMaterializedViewName().getSuffix(),
         CommandId.Action.RESUME
+    );
+  }
+
+  private static CommandId getStatusMaterializedCommandId(
+      final StatusMaterialized statusMaterializedView) {
+    return new CommandId(
+        CommandId.Type.MATERIALIZED_VIEW,
+        statusMaterializedView.getMaterializedViewName().getSuffix(),
+        CommandId.Action.STATUS
     );
   }
 }

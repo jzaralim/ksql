@@ -19,6 +19,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.confluent.ksql.rest.entity.ConnectRequest;
 import io.confluent.ksql.rest.entity.ConnectorInfo;
 import io.confluent.ksql.rest.entity.ConnectorList;
+import io.confluent.ksql.rest.entity.ConnectorStatus;
 
 import java.util.Map;
 import java.util.Optional;
@@ -52,8 +53,9 @@ public class KsqlConnectClient {
         r -> r.readEntity(ConnectorInfo.class));
   }
 
-  public RestResponse<ConnectorInfo> getConnectorInfo(final String connector) {
-    return client.getRequest(String.format("/connectors/%s", connector), ConnectorInfo.class);
+  public RestResponse<ConnectorStatus> getConnectorStatus(final String connector) {
+    return client.getRequest(
+        String.format("/connectors/%s/status", connector), ConnectorStatus.class);
   }
 
   public RestResponse<String> deleteConnector(final String connector) {

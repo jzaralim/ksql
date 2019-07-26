@@ -24,11 +24,14 @@ import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.DropMaterialized;
 import io.confluent.ksql.parser.tree.PauseMaterialized;
 import io.confluent.ksql.parser.tree.ResumeMaterialized;
+import io.confluent.ksql.parser.tree.StatusMaterialized;
 import io.confluent.ksql.rest.client.KsqlConnectClient;
 import io.confluent.ksql.rest.client.RestResponse;
 import io.confluent.ksql.rest.entity.ConnectRequest;
 import io.confluent.ksql.rest.entity.ConnectorEntity;
 import io.confluent.ksql.rest.entity.ConnectorInfo;
+import io.confluent.ksql.rest.entity.ConnectorStatus;
+import io.confluent.ksql.rest.entity.ConnectorStatusEntity;
 import io.confluent.ksql.rest.entity.KsqlEntity;
 import io.confluent.ksql.services.ServiceContext;
 import io.confluent.ksql.statement.ConfiguredStatement;
@@ -143,6 +146,30 @@ public final class MaterializedViewExecutor {
     );
     client.resumeConnector(materializedViewName);
     return Optional.empty();
+  }
+
+  public static Optional<KsqlEntity> status(
+      final ConfiguredStatement<StatusMaterialized> statement,
+      final KsqlExecutionContext executionContext,
+      final ServiceContext serviceContext) {
+    final KsqlConfig config = statement.getConfig();
+    return status(getConnectClient(config), statement, executionContext);
+  }
+
+  public static Optional<KsqlEntity> status(
+      final KsqlConnectClient client,
+      final ConfiguredStatement<?> statement,
+      final KsqlExecutionContext executionContext) {
+    final String materializedViewName =
+        ((StatusMaterialized) statement.getStatement()).getMaterializedViewName().getSuffix();
+    verifyDatasource(
+        materializedViewName,
+        executionContext.getMetaStore(),
+        DataSource.DataSourceType.MATERIALIZED
+    );
+    final RestResponse<ConnectorStatus> response = client.getConnectorStatus(materializedViewName);
+    return Optional.of(
+        new ConnectorStatusEntity(statement.getStatementText(), response.getResponse()));
   }
 
   @VisibleForTesting
