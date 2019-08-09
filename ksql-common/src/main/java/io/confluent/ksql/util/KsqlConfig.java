@@ -181,8 +181,7 @@ public class KsqlConfig extends AbstractConfig {
           + "in 5.2 and earlier versions."
           + "This property should not be set for 5.3 and later versions.";
 
-  public static final String
-      defaultSchemaRegistryUrl = "http://localhost:8081";
+  public static final String DEFAULT_SCHEMA_REGISTRY_URL = "http://localhost:8081";
 
   public static final String
       defaultConnectUrl = "http://localhost:8083";
@@ -222,6 +221,11 @@ public class KsqlConfig extends AbstractConfig {
           + "\"off\" disables the validator. If set to \"auto\", KSQL will attempt to discover "
           + "whether the Kafka cluster supports the required API, and enables the validator if "
           + "it does.";
+
+  public static final String KSQL_SERVICE_ID_DOC = "Indicates the ID of the ksql service. "
+      + "It will be used as prefix for all implicitly named resources created by this "
+      + "instance in Kafka. By convention, the id should end in a seperator character of "
+      + "some form, e.g. a dash or underscore, as this makes identifiers easier to read.";
 
   public static final Collection<CompatibilityBreakingConfigDef> COMPATIBLY_BREAKING_CONFIG_DEFS
       = ImmutableList.of(
@@ -430,7 +434,7 @@ public class KsqlConfig extends AbstractConfig {
             ConfigDef.Type.STRING,
             KSQL_SERVICE_ID_DEFAULT,
             ConfigDef.Importance.MEDIUM,
-            "Indicates the ID of the ksql service. It will be used as prefix for "
+            KSQL_SERVICE_ID_DOC
         )
         .define(
             KSQL_TRANSIENT_QUERY_NAME_PREFIX_CONFIG,
@@ -453,7 +457,7 @@ public class KsqlConfig extends AbstractConfig {
         ).define(
             SCHEMA_REGISTRY_URL_PROPERTY,
             ConfigDef.Type.STRING,
-            defaultSchemaRegistryUrl,
+            DEFAULT_SCHEMA_REGISTRY_URL,
             ConfigDef.Importance.MEDIUM,
             "The URL for the schema registry, defaults to http://localhost:8081"
         ).define(

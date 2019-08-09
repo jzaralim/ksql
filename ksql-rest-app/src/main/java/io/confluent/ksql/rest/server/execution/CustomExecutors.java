@@ -18,6 +18,7 @@ package io.confluent.ksql.rest.server.execution;
 import com.google.common.collect.ImmutableMap;
 import io.confluent.ksql.KsqlExecutionContext;
 import io.confluent.ksql.engine.InsertValuesExecutor;
+import io.confluent.ksql.parser.tree.CreateConnector;
 import io.confluent.ksql.parser.tree.CreateMaterializedView;
 import io.confluent.ksql.parser.tree.DescribeFunction;
 import io.confluent.ksql.parser.tree.DropMaterialized;
@@ -73,7 +74,8 @@ public enum CustomExecutors {
   STOP_MATERIALIZED(PauseMaterialized.class, MaterializedViewExecutor::pause),
   RESTART_MATERIALIZED(ResumeMaterialized.class, MaterializedViewExecutor::resume),
   STATUS_MATERIALIZED(StatusMaterialized.class, MaterializedViewExecutor::status),
-  CREATE_MATERIALIZED_VIEW(CreateMaterializedView.class, MaterializedViewExecutor::create);
+  CREATE_MATERIALIZED_VIEW(CreateMaterializedView.class, MaterializedViewExecutor::create),
+  CREATE_CONNECTOR(CreateConnector.class, ConnectExecutor::execute);
 
   public static final Map<Class<? extends Statement>, StatementExecutor<?>> EXECUTOR_MAP =
       ImmutableMap.copyOf(

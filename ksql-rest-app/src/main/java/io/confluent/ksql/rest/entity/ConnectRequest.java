@@ -94,10 +94,10 @@ public class ConnectRequest {
     config.put("cassandra.contact.points", properties.get(KsqlConfig.CASSANDRA_HOST_PROPERTY));
     config.put("cassandra.port", properties.get(KsqlConfig.CASSANDRA_PORT_PROPERTY));
 
-    if (dataSource.getValueSerdeFactory().getFormat() == Format.JSON) {
+    if (dataSource.getKsqlTopic().getValueFormat().getFormat() == Format.JSON) {
       config.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
       config.put("value.converter.schemas.enable", "false");
-    } else if (dataSource.getValueSerdeFactory().getFormat() == Format.AVRO) {
+    } else if (dataSource.getKsqlTopic().getValueFormat().getFormat() == Format.AVRO) {
       config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
       config.put("value.converter.schema.registry.url",
           properties.get(KsqlConfig.SCHEMA_REGISTRY_URL_PROPERTY));

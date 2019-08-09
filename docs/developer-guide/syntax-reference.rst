@@ -277,7 +277,8 @@ Map
 .. note:: The ``DELIMITED`` format doesn't support maps.
 
 KSQL supports fields that are maps. A map has a key and value type. All of the keys must be of the
-same type, and all of the values must be also be of the same type. Currently only ``STRING`` keys are supported. The value type can be any valid KSQL type.
+same type, and all of the values must be also be of the same type. Currently only ``STRING`` keys
+are supported. The value type can be any valid KSQL type.
 
 You can define maps within a ``CREATE TABLE`` or ``CREATE STREAM`` statement by using the syntax
 ``MAP<KeyType, ValueType>``. For example, ``MAP<STRING, INT>`` defines a map with string keys and
@@ -802,7 +803,7 @@ if the source stream for the query is ordered by timestamp.
 
 
 INSERT VALUES
------------
+-------------
 
 **Synopsis**
 
@@ -833,18 +834,18 @@ For example, the statements below would all be valid for a source with schema
   .. code:: sql
 
       // inserts (1234, "key", "key", "A")
-      INSERT INTO foo (ROWTIME, ROWKEY, KEY_COL, COL_A) VALUES (1234, "key", "key", "A");
+      INSERT INTO foo (ROWTIME, ROWKEY, KEY_COL, COL_A) VALUES (1234, 'key', 'key', 'A');
 
       // inserts (current_time(), "key", "key", "A")
-      INSERT INTO foo VALUES ("key", "key", "A");
+      INSERT INTO foo VALUES ('key', 'key', 'A');
 
       // inserts (current_time(), "key", "key", "A")
-      INSERT INTO foo (KEY_COL, COL_A) VALUES ("key", "A");
+      INSERT INTO foo (KEY_COL, COL_A) VALUES ('key', 'A');
 
       // inserts (current_time(), "key", "key", null)
-      INSERT INTO foo (KEY_COL) VALUES ("key");
+      INSERT INTO foo (KEY_COL) VALUES ('key');
 
-The values will serialize using the ``value_format`` specified in the original `CREATE` statement.
+The values will serialize using the ``value_format`` specified in the original ``CREATE`` statement.
 The key will always be serialized as a String.
 
 .. _ksql-syntax-describe:
@@ -958,7 +959,7 @@ DESCRIBE FUNCTION
 
 **Description**
 
-Provides a description of a function including an input parameters and the return type.
+Provides a description of a function including input parameters and the return type.
 
 .. _ksql-syntax-explain:
 
@@ -1092,7 +1093,7 @@ The PRINT statement supports the following properties:
 +=========================+==================================================================================================================+
 | FROM BEGINNING          | Print starting with the first message in the topic. If not specified, PRINT starts with the most recent message. |
 +-------------------------+------------------------------------------------------------------------------------------------------------------+
-| INTERVAL interval       | Print every ``interval``th message. The default is 1, meaning that every message is printed.                     |
+| INTERVAL interval       | Print every ``interval`` th message. The default is 1, meaning that every message is printed.                    |
 +-------------------------+------------------------------------------------------------------------------------------------------------------+
 | LIMIT limit             | Stop printing after ``limit`` messages. The default value is unlimited, requiring Ctrl+C to terminate the query. |
 +-------------------------+------------------------------------------------------------------------------------------------------------------+
@@ -1151,6 +1152,21 @@ Example:
     SELECT * FROM pageviews
       WHERE ROWTIME >= 1510923225000
         AND ROWTIME <= 1510923228000;
+
+When writing logical expressions using ``ROWTIME``, ISO-8601 formatted datestrings can also be used to represent dates.
+For example, the above query is equivalent to the following:
+
+.. code:: sql
+
+    SELECT * FROM pageviews
+          WHERE ROWTIME >= '2017-11-17T04:53:45'
+            AND ROWTIME <= '2017-11-17T04:53:48';
+
+If the datestring is inexact, the rest of the timestamp is assumed to be padded with 0's.
+For example, ``ROWTIME = '2019-07-30T11:00'`` is equivalent to ``ROWTIME = '2019-07-30T11:00:00.0000'``.
+
+Timezones can be specified within the datestring. For example, `2017-11-17T04:53:45-0330` is in the Newfoundland time
+zone. If no timezone is specified within the datestring, then timestamps are interperted in the UTC timezone.
 
 A ``LIMIT`` can be used to limit the number of rows returned. Once the limit is reached the query will terminate.
 
@@ -1337,13 +1353,14 @@ SHOW TOPICS
 
 .. code:: sql
 
-    SHOW | LIST TOPICS;
+    SHOW | LIST TOPICS [EXTENDED];
 
 **Description**
 
-List the available topics in the Kafka cluster that KSQL is configured
+SHOW TOPICS lists the available topics in the Kafka cluster that KSQL is configured
 to connect to (default setting for ``bootstrap.servers``:
-``localhost:9092``).
+``localhost:9092``). SHOW TOPICS EXTENDED also displays consumer groups and their active consumer
+counts.
 
 .. _show-streams:
 
@@ -1411,7 +1428,7 @@ _____
 **Description**
 
 Stores issued commands and their results into a file. Only one spool may be active at a time and can
-be closed by issuing ``SPOOL OFF``. Commands are prefixed with ``ksql> `` to differentiate from
+be closed by issuing ``SPOOL OFF`` . Commands are prefixed with ``ksql>`` to differentiate from
 output.
 
 
@@ -1528,6 +1545,12 @@ Scalar functions
 | ARRAYCONTAINS          |  ``ARRAYCONTAINS('[1, 2, 3]', 3)``                                        | Given JSON or AVRO array checks if a search       |
 |                        |                                                                           | value contains in it                              |
 +------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
+| AS_ARRAY               |  ``AS_ARRAY(col1, col2)```                                                | Construct an array from a variable number of      |
+|                        |                                                                           | inputs.                                           |
++------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
+| AS_MAP                 |  ``AS_MAP(keys, vals)```                                                  | Construct a map from a list of keys and a list of |
+|                        |                                                                           | values.                                           |
++------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
 | CEIL                   |  ``CEIL(col1)``                                                           | The ceiling of a value.                           |
 +------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
 | CONCAT                 |  ``CONCAT(col1, '_hello')``                                               | Concatenate two strings.                          |
@@ -1641,6 +1664,9 @@ Scalar functions
 | ROUND                  |  ``ROUND(col1)``                                                          | Round a value to the nearest BIGINT value.        |
 +------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
 | SQRT                   |  ``SQRT(col1)``                                                           | The square root of a value.                       |
++------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
+| SLICE                  |  ``SLICE(col1, from, to)``                                                | Slices a list based on the supplied indices. The  |
+|                        |                                                                           | indices start at 1 and include both endpoints.    |
 +------------------------+---------------------------------------------------------------------------+---------------------------------------------------+
 | SPLIT                  |  ``SPLIT(col1, delimiter)``                                               | Splits a string into an array of substrings based |
 |                        |                                                                           | on a delimiter. If the delimiter is not found,    |

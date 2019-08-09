@@ -62,7 +62,9 @@ public class MaterializedQueryExecutorTest {
             Optional.empty(),
             Optional.empty(),
             OptionalInt.empty()
-        )
+        ),
+        null,
+        null
     );
     verify(session).execute("SELECT * FROM MATVIEW.test2;");
   }
@@ -82,7 +84,9 @@ public class MaterializedQueryExecutorTest {
             Optional.empty(),
             Optional.empty(),
             OptionalInt.empty()
-        )
+        ),
+        null,
+        null
     );
     verify(session).execute("SELECT * FROM MATVIEW.test2;");
   }
@@ -102,7 +106,9 @@ public class MaterializedQueryExecutorTest {
             Optional.empty(),
             Optional.empty(),
             OptionalInt.empty()
-        )
+        ),
+        null,
+        null
     );
     verify(session).execute("SELECT * FROM MATVIEW.test2 WHERE COL0=500 ALLOW FILTERING;");
   }

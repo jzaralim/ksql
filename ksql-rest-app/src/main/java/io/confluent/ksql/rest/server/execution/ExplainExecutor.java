@@ -160,7 +160,7 @@ public final class ExplainExecutor {
       }
     }
 
-    if (dataSource.isWindowed()) {
+    if (dataSource.getKsqlTopic().getKeyFormat().isWindowed()) {
       fieldInfoList.add(new FieldInfo("WindowedKey", fakeInfo));
     }
 

@@ -372,8 +372,7 @@ public class StatementExecutor {
         dataSource.getSerdeOptions(),
         dataSource.getKeyField(),
         dataSource.getTimestampExtractionPolicy(),
-        dataSource.getKsqlTopic(),
-        dataSource.getKeySerdeFactory()));
+        dataSource.getKsqlTopic()));
     metaStore.putConnector(createMaterializedView.getMaterializedViewName());
   }
 }

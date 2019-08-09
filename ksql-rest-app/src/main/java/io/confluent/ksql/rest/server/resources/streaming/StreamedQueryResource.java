@@ -214,7 +214,9 @@ public class StreamedQueryResource {
       throws JsonProcessingException {
     final List<GenericRow> rows = materializedQueryExecutor.executeQuery(
         statement.getStatementText(),
-        statement.getStatement()
+        statement.getStatement(),
+        ksqlConfig,
+        ksqlEngine.getServiceContext()
     );
 
     String entity = "";

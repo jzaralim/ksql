@@ -8,15 +8,13 @@ import io.confluent.ksql.metastore.model.KeyField;
 import io.confluent.ksql.metastore.model.KsqlTable;
 import io.confluent.ksql.metastore.model.KsqlTopic;
 import io.confluent.ksql.schema.ksql.LogicalSchema;
-import io.confluent.ksql.serde.SerdeOption;
-import io.confluent.ksql.serde.avro.KsqlAvroSerdeFactory;
-import io.confluent.ksql.serde.delimited.KsqlDelimitedSerdeFactory;
-import io.confluent.ksql.serde.json.KsqlJsonSerdeFactory;
+import io.confluent.ksql.serde.*;
 import io.confluent.ksql.util.timestamp.MetadataTimestampExtractionPolicy;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.junit.Test;
+
+import java.util.Optional;
 
 public class ConnectRequestTest {
   public static final LogicalSchema SCHEMA = LogicalSchema.of(SchemaBuilder.struct()
@@ -33,10 +31,14 @@ public class ConnectRequestTest {
             "bar",
             SCHEMA,
             SerdeOption.none(),
-            KeyField.of("val", SCHEMA.valueSchema().field("val")),
+            KeyField.of("val", SCHEMA.findValueField("val").get()),
             new MetadataTimestampExtractionPolicy(),
-            new KsqlTopic("BAR", "bar", new KsqlJsonSerdeFactory(), false),
-            Serdes::String
+            new KsqlTopic(
+                "BAR",
+                KeyFormat.nonWindowed(FormatInfo.of(Format.JSON)),
+                ValueFormat.of(FormatInfo.of(Format.JSON)),
+                false
+            )
         ),
         KsqlConfigTestUtil.create("localhost:9092")
     );
@@ -59,10 +61,14 @@ public class ConnectRequestTest {
             "bar",
             SCHEMA,
             SerdeOption.none(),
-            KeyField.of("val", SCHEMA.valueSchema().field("val")),
+            KeyField.of("val", SCHEMA.findValueField("val").get()),
             new MetadataTimestampExtractionPolicy(),
-            new KsqlTopic("BAR", "bar", new KsqlAvroSerdeFactory("schema"), false),
-            Serdes::String
+            new KsqlTopic(
+                "BAR",
+                KeyFormat.nonWindowed(FormatInfo.of(Format.AVRO, Optional.of("schema"))),
+                ValueFormat.of(FormatInfo.of(Format.AVRO)),
+                false
+            )
         ),
         KsqlConfigTestUtil.create("localhost:9092")
     );
@@ -85,10 +91,14 @@ public class ConnectRequestTest {
             "bar",
             SCHEMA,
             SerdeOption.none(),
-            KeyField.of("val", SCHEMA.valueSchema().field("val")),
+            KeyField.of("val",  SCHEMA.findValueField("val").get()),
             new MetadataTimestampExtractionPolicy(),
-            new KsqlTopic("BAR", "bar", new KsqlDelimitedSerdeFactory(), false),
-            Serdes::String
+            new KsqlTopic(
+                "BAR",
+                KeyFormat.nonWindowed(FormatInfo.of(Format.DELIMITED)),
+                ValueFormat.of(FormatInfo.of(Format.DELIMITED)),
+                false
+            )
         ),
         KsqlConfigTestUtil.create("localhost:9092")
     );

@@ -22,19 +22,25 @@ import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.google.common.annotations.VisibleForTesting;
 import io.confluent.ksql.GenericRow;
+import io.confluent.ksql.logging.processing.NoopProcessingLogContext;
 import io.confluent.ksql.metastore.MetaStore;
 import io.confluent.ksql.metastore.model.DataSource;
-import io.confluent.ksql.metastore.model.MaterializedView;
 import io.confluent.ksql.parser.tree.AliasedRelation;
+import io.confluent.ksql.parser.tree.AllColumns;
 import io.confluent.ksql.parser.tree.Query;
 import io.confluent.ksql.parser.tree.SelectItem;
 import io.confluent.ksql.parser.tree.SingleColumn;
-
+import io.confluent.ksql.schema.ksql.Field;
+import io.confluent.ksql.schema.ksql.PhysicalSchema;
+import io.confluent.ksql.serde.GenericKeySerDe;
+import io.confluent.ksql.serde.KeySerde;
+import io.confluent.ksql.services.ServiceContext;
+import io.confluent.ksql.util.KsqlConfig;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.streams.kstream.Windowed;
 
 public class MaterializedQueryExecutor {
@@ -57,7 +63,9 @@ public class MaterializedQueryExecutor {
 
   public List<GenericRow> executeQuery(
       final String statement,
-      final Query query) {
+      final Query query,
+      final KsqlConfig ksqlConfig,
+      final ServiceContext serviceContext) {
     final String from = ((AliasedRelation) query.getFrom()).getAlias();
     final DataSource<?> dataSource = metaStore.getSource(from);
     final List<SelectItem> selectItemList = query.getSelect().getSelectItems();
@@ -75,20 +83,37 @@ public class MaterializedQueryExecutor {
               dataSource.getSchema().findField(((SingleColumn) item).getAlias()).get()
           ));
         } else {
-          for (Field field : dataSource.getSchema().valueSchema().fields()) {
+          for (Field field : dataSource
+              .getSchema()
+              .withoutMetaAndKeyFieldsInValue()
+              .valueFields()) {
             columns.add(getResultItem(row, field));
           }
         }
       }
-      if (((MaterializedView) dataSource).isWindowed()) {
+      if (dataSource.getKsqlTopic().getKeyFormat().isWindowed()) {
         try {
-          final Windowed windowedKey = (Windowed) dataSource
-              .getKeySerdeFactory()
-              .create()
+          final PhysicalSchema physicalSchema = PhysicalSchema.from(
+              dataSource.getSchema(),
+              dataSource.getSerdeOptions()
+          );
+          final KeySerde<Windowed<Struct>> keySerde = new GenericKeySerDe().create(
+              dataSource.getKsqlTopic().getKeyFormat().getFormatInfo(),
+              dataSource.getKsqlTopic().getKeyFormat().getWindowInfo().get(),
+              physicalSchema.keySchema(),
+              ksqlConfig,
+              serviceContext.getSchemaRegistryClientFactory(),
+              "",
+              NoopProcessingLogContext.INSTANCE
+          );
+
+          final Windowed windowedKey = keySerde
               .deserializer()
               .deserialize(dataSource.getKafkaTopicName(), row.getString("rowkey").getBytes(UTF_8));
           columns.add(String.format("%s : Window{start=%d end=%s}",
-              windowedKey.key(), windowedKey.window().start(), windowedKey.window().end()));
+              windowedKey.key(),
+              windowedKey.window().start(),
+              windowedKey.window().end()));
         } catch (Exception e) {
           columns.add(0);
         }
@@ -101,7 +126,7 @@ public class MaterializedQueryExecutor {
 
   private String getCassandraQuery(final String statement, final Query query) {
     final String from = ((AliasedRelation) query.getFrom()).getAlias();
-    final String preWhere;
+    String preWhere;
     final String postWhere;
 
     if (query.getWhere().isPresent()) {
@@ -112,24 +137,26 @@ public class MaterializedQueryExecutor {
       preWhere = statement.toUpperCase();
       postWhere = "";
     }
+
+    if (!(query.getSelect().getSelectItems().get(0) instanceof AllColumns)) {
+      preWhere = preWhere.replace("SELECT ", "SELECT rowkey,");
+    }
+
     return preWhere.replace(from, from + "." + metaStore.getSource(from).getKafkaTopicName())
         + postWhere;
   }
 
   private Object getResultItem(final Row row, final Field field) {
-    switch (field.schema().type()) {
+    switch (field.type().baseType()) {
       case STRING:
         return row.getString(field.name());
       case BOOLEAN:
         return row.getBoolean(field.name());
-      case INT8:
-      case INT16:
-      case INT32:
+      case INTEGER:
         return row.getInt(field.name());
-      case INT64:
+      case BIGINT:
         return row.getLong(field.name());
-      case FLOAT32:
-      case FLOAT64:
+      case DOUBLE:
         return row.getFloat(field.name());
       case MAP:
         return row.getMap(field.name(), Object.class, Object.class);

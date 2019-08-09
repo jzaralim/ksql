@@ -62,8 +62,7 @@ import io.confluent.ksql.rest.server.computation.CommandId.Action;
 import io.confluent.ksql.rest.server.computation.CommandId.Type;
 import io.confluent.ksql.rest.server.utils.TestUtils;
 import io.confluent.ksql.schema.ksql.LogicalSchema;
-import io.confluent.ksql.serde.SerdeOption;
-import io.confluent.ksql.serde.SerdeOptions;
+import io.confluent.ksql.serde.*;
 import io.confluent.ksql.serde.json.KsqlJsonSerdeFactory;
 import io.confluent.ksql.services.FakeKafkaTopicClient;
 import io.confluent.ksql.services.ServiceContext;
@@ -653,11 +652,15 @@ public class StatementExecutorTest extends EasyMockSupport {
             "BAR",
             schema,
             SerdeOption.none(),
-            KeyField.of("val", schema.valueSchema().field("val")),
+            KeyField.of("val", schema.findValueField("val").get()),
             new MetadataTimestampExtractionPolicy(),
-            new KsqlTopic("foo", "foo", new KsqlJsonSerdeFactory(), false),
-            Serdes::String
-            ));
+            new KsqlTopic(
+                "foo",
+                KeyFormat.nonWindowed(FormatInfo.of(Format.JSON)),
+                ValueFormat.of(FormatInfo.of(Format.JSON)),
+                false
+            )
+        ));
     handleStatement(
         givenCommand("CREATE MATERIALIZED VIEW FOO AS SELECT * FROM BAR;", ksqlConfig),
         new CommandId(Type.MATERIALIZED_VIEW, "foo", CommandId.Action.EXECUTE),

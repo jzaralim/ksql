@@ -32,9 +32,9 @@ singleExpression
     ;
 
 statement
-    : query                                                                 #querystatement
+    : query                                                                 #queryStatement
     | (LIST | SHOW) PROPERTIES                                              #listProperties
-    | (LIST | SHOW) TOPICS                                                  #listTopics
+    | (LIST | SHOW) TOPICS EXTENDED?                                        #listTopics
     | (LIST | SHOW) STREAMS EXTENDED?                                       #listStreams
     | (LIST | SHOW) TABLES EXTENDED?                                        #listTables
     | (LIST | SHOW) MATERIALIZED                                            #listMaterialized
@@ -59,6 +59,7 @@ statement
             (WITH tableProperties)? AS query                                #createTableAs
     | CREATE MATERIALIZED VIEW identifier AS SELECT ASTERISK
             FROM identifier                                                 #createMaterializedView
+    | CREATE (SINK | SOURCE) CONNECTOR identifier WITH tableProperties      #createConnector
     | INSERT INTO qualifiedName query (PARTITION BY identifier)?            #insertInto
     | INSERT INTO qualifiedName (columns)? VALUES values                    #insertValues
     | DROP STREAM (IF EXISTS)? qualifiedName (DELETE TOPIC)?                #dropStream
@@ -94,7 +95,7 @@ tableProperties
     ;
 
 tableProperty
-    : identifier EQ literal
+    : (identifier | STRING) EQ literal
     ;
 
 printClause
@@ -323,6 +324,7 @@ nonReserved
     | EXPLAIN | ANALYZE | TYPE
     | SET | RESET
     | IF
+    | CONNECTOR | SOURCE | SINK
     | KEY
     ;
 
@@ -440,6 +442,9 @@ KEY: 'KEY';
 PAUSE: 'PAUSE';
 RESUME: 'RESUME';
 STATUS: 'STATUS';
+CONNECTOR: 'CONNECTOR';
+SINK: 'SINK';
+SOURCE: 'SOURCE';
 
 IF: 'IF';
 
