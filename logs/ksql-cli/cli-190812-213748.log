@@ -1,0 +1,30 @@
+[2019-08-12 21:37:49,755] WARN Writing to metrics Kafka topic will be disabled (io.confluent.support.metrics.PhoneHomeConfig:61)
+[2019-08-12 21:37:49,759] WARN Enforcing customer ID 'anonymous' (io.confluent.support.metrics.PhoneHomeConfig:66)
+[2019-08-12 21:37:49,768] WARN Please note that the version check feature of KSQL is enabled.  With this enabled, this instance is configured to collect and report anonymously the version information to Confluent, Inc. ("Confluent") or its parent, subsidiaries, affiliates or service providers every 24hours.  This Metadata may be transferred to any country in which Confluent maintains facilities.  For a more in depth discussion of how Confluent processes such information, please read our Privacy Policy located at http://www.confluent.io/privacy. By proceeding with `confluent.support.metrics.enable=true`, you agree to all such collection, transfer and use of Version information by Confluent. You can turn the version check  feature off by setting `confluent.support.metrics.enable=false` in the KSQL configuration and restarting the KSQL.  See the Confluent Platform documentation for further information. (io.confluent.ksql.version.metrics.KsqlVersionCheckerAgent:90)
+[2019-08-12 22:21:23,103] ERROR  (io.confluent.ksql.cli.Cli:163)
+io.confluent.ksql.parser.exception.ParseFailedException: line 1:6: no viable alternative at input 'drop MAT_USERS'
+Statement: drop MAT_USERS;
+	at io.confluent.ksql.parser.DefaultKsqlParser.parse(DefaultKsqlParser.java:65)
+	at io.confluent.ksql.cli.Cli.handleStatements(Cli.java:253)
+	at io.confluent.ksql.cli.Cli.handleLine(Cli.java:218)
+	at io.confluent.ksql.cli.Cli.runInteractively(Cli.java:157)
+	at io.confluent.ksql.Ksql.run(Ksql.java:103)
+	at io.confluent.ksql.Ksql.main(Ksql.java:71)
+Caused by: io.confluent.ksql.parser.ParsingException: line 1:6: no viable alternative at input 'drop MAT_USERS'
+	at io.confluent.ksql.parser.DefaultKsqlParser$1.syntaxError(DefaultKsqlParser.java:51)
+	at org.antlr.v4.runtime.ProxyErrorListener.syntaxError(ProxyErrorListener.java:41)
+	at org.antlr.v4.runtime.Parser.notifyErrorListeners(Parser.java:544)
+	at org.antlr.v4.runtime.DefaultErrorStrategy.reportNoViableAlternative(DefaultErrorStrategy.java:282)
+	at org.antlr.v4.runtime.DefaultErrorStrategy.reportError(DefaultErrorStrategy.java:121)
+	at io.confluent.ksql.parser.SqlBaseParser.statement(SqlBaseParser.java:1833)
+	at io.confluent.ksql.parser.SqlBaseParser.singleStatement(SqlBaseParser.java:260)
+	at io.confluent.ksql.parser.SqlBaseParser.statements(SqlBaseParser.java:208)
+	at io.confluent.ksql.parser.DefaultKsqlParser.getParseTree(DefaultKsqlParser.java:116)
+	at io.confluent.ksql.parser.DefaultKsqlParser.parse(DefaultKsqlParser.java:58)
+	... 5 more
+Caused by: org.antlr.v4.runtime.NoViableAltException
+	at org.antlr.v4.runtime.atn.ParserATNSimulator.noViableAlt(ParserATNSimulator.java:2023)
+	at org.antlr.v4.runtime.atn.ParserATNSimulator.execATN(ParserATNSimulator.java:467)
+	at org.antlr.v4.runtime.atn.ParserATNSimulator.adaptivePredict(ParserATNSimulator.java:393)
+	at io.confluent.ksql.parser.SqlBaseParser.statement(SqlBaseParser.java:1047)
+	... 9 more

@@ -77,7 +77,9 @@ public class MaterializedViewExecutorTest {
     // Given:
     final ConfiguredStatement<?> dropMaterializedView = engine.configure("DROP MATERIALIZED FOO;");
 
+    engine.givenSource(DataSource.DataSourceType.MATERIALIZED, "FOO");
     KsqlEngine engine = mock(KsqlEngine.class);
+    when(engine.getMetaStore()).thenReturn(this.engine.getEngine().getMetaStore());
 
     // When:
     MaterializedViewExecutor.drop(client, dropMaterializedView, engine);

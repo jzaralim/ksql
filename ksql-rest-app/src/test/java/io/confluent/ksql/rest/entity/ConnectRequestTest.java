@@ -46,7 +46,7 @@ public class ConnectRequestTest {
     // Then:
     assertThat(request.getConfig().get("name"), equalTo("foo"));
     assertThat(request.getConfig().get("cassandra.keyspace"), equalTo("foo"));
-    assertThat(request.getConfig().get("topics"), equalTo("bar"));
+    assertThat(request.getConfig().get("topics"), equalTo("BAR"));
     assertThat(request.getConfig().get("value.converter"), equalTo("org.apache.kafka.connect.json.JsonConverter"));
     assertThat(request.getConfig().get("value.converter.schemas.enable"), equalTo("false"));
   }
@@ -76,7 +76,7 @@ public class ConnectRequestTest {
     // Then:
     assertThat(request.getConfig().get("name"), equalTo("foo"));
     assertThat(request.getConfig().get("cassandra.keyspace"), equalTo("foo"));
-    assertThat(request.getConfig().get("topics"), equalTo("bar"));
+    assertThat(request.getConfig().get("topics"), equalTo("BAR"));
     assertThat(request.getConfig().get("value.converter"), equalTo("io.confluent.connect.avro.AvroConverter"));
     assertThat(request.getConfig().get("value.converter.schema.registry.url"), equalTo("http://localhost:8081"));
   }
@@ -106,7 +106,7 @@ public class ConnectRequestTest {
     // Then:
     assertThat(request.getConfig().get("name"), equalTo("foo"));
     assertThat(request.getConfig().get("cassandra.keyspace"), equalTo("foo"));
-    assertThat(request.getConfig().get("topics"), equalTo("bar"));
+    assertThat(request.getConfig().get("topics"), equalTo("BAR"));
     assertThat(request.getConfig().get("value.converter"), equalTo("org.apache.kafka.connect.storage.StringConverter"));
   }
 }

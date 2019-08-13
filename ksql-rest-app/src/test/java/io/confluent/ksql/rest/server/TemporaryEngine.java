@@ -22,12 +22,8 @@ import io.confluent.ksql.engine.KsqlEngineTestUtil;
 import io.confluent.ksql.function.InternalFunctionRegistry;
 import io.confluent.ksql.metastore.MetaStoreImpl;
 import io.confluent.ksql.metastore.MutableMetaStore;
-import io.confluent.ksql.metastore.model.DataSource;
+import io.confluent.ksql.metastore.model.*;
 import io.confluent.ksql.metastore.model.DataSource.DataSourceType;
-import io.confluent.ksql.metastore.model.KeyField;
-import io.confluent.ksql.metastore.model.KsqlStream;
-import io.confluent.ksql.metastore.model.KsqlTable;
-import io.confluent.ksql.metastore.model.KsqlTopic;
 import io.confluent.ksql.parser.DefaultKsqlParser;
 import io.confluent.ksql.schema.ksql.LogicalSchema;
 import io.confluent.ksql.serde.Format;
@@ -115,6 +111,18 @@ public class TemporaryEngine extends ExternalResource {
       case KTABLE:
         source =
             new KsqlTable<>(
+                "statement",
+                name,
+                SCHEMA,
+                SerdeOption.none(),
+                KeyField.of("val", SCHEMA.findValueField("val").get()),
+                new MetadataTimestampExtractionPolicy(),
+                topic
+            );
+        break;
+      case MATERIALIZED:
+        source =
+            new MaterializedView<>(
                 "statement",
                 name,
                 SCHEMA,
