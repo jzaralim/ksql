@@ -3,8 +3,9 @@ This is an proof of concept of a possible implementation of interactive queries.
 
 ## Setup
 1. Download and run [Cassandra](http://cassandra.apache.org/download/).
-2. Start up a Kafka Connect cluster.
-3. Add the Cassandra and Connect endpoints to `ksql-server.properties`
+2. Clone into the [KeyToValue SMT](https://github.com/jzaralim/KeyToValueTransform) and build it. Add the path to the generated `.jar` file to the connect configs.
+3. Start up a Kafka Connect cluster.
+4. Add the Cassandra and Connect endpoints to `ksql-server.properties`
 ```
 # The URL of the Connect cluster
 ksql.connect.url=http://localhost:8083
@@ -104,3 +105,9 @@ Drop the materialized table by running `DROP MATERIALIZED FOO;`. You should get 
 ----------------------------------------
 ```
 This command only drops the materialization and not the underlying table.
+
+## Windowed Keys
+Windowed key serialization/deserialization is broken. The rowkey always gets extracted correctly, but the window times
+are inaccurate. I investigated it and that the key in the topic and the key in Cassandra are different. I don't know
+how or why that happens to windowed keys but not other types of keys though. A workaround could be to add some string
+transformations to the KeyToValue SMT.
