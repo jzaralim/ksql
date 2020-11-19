@@ -19,25 +19,26 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.errorprone.annotations.Immutable;
 import io.confluent.ksql.parser.NodeLocation;
+import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
 
 @Immutable
 public class TimestampLiteral extends Literal {
 
-  private final String value;
+  private final Date value;
 
-  public TimestampLiteral(final String value) {
+  public TimestampLiteral(final Date value) {
     this(Optional.empty(), value);
   }
 
-  public TimestampLiteral(final Optional<NodeLocation> location, final String value) {
+  public TimestampLiteral(final Optional<NodeLocation> location, final Date value) {
     super(location);
     this.value = requireNonNull(value, "value");
   }
 
   @Override
-  public String getValue() {
+  public Date getValue() {
     return value;
   }
 

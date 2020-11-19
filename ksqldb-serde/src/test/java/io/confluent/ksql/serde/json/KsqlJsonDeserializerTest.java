@@ -42,6 +42,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,7 @@ import org.apache.kafka.connect.data.ConnectSchema;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Timestamp;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -72,6 +74,7 @@ public class KsqlJsonDeserializerTest {
   private static final String ARRAYCOL = "ARRAYCOL";
   private static final String MAPCOL = "MAPCOL";
   private static final String CASE_SENSITIVE_FIELD = "caseField";
+  private static final String TIMESTAMPFIELD = "TIMESTAMPFIELD";
 
   private static final Schema ORDER_SCHEMA = SchemaBuilder.struct()
       .field(ORDERTIME, Schema.OPTIONAL_INT64_SCHEMA)
@@ -87,6 +90,7 @@ public class KsqlJsonDeserializerTest {
           .map(Schema.OPTIONAL_STRING_SCHEMA, Schema.OPTIONAL_FLOAT64_SCHEMA)
           .optional()
           .build())
+      .field(TIMESTAMPFIELD, Timestamp.SCHEMA)
       .build();
 
   private static final Map<String, Object> AN_ORDER = ImmutableMap.<String, Object>builder()
@@ -97,6 +101,7 @@ public class KsqlJsonDeserializerTest {
       .put("arraycol", ImmutableList.of(10.0, 20.0))
       .put("mapcol", Collections.singletonMap("key1", 10.0))
       .put("caseField", 1L)
+      .put("timestampfield", new Date(1000))
       .build();
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
@@ -126,7 +131,8 @@ public class KsqlJsonDeserializerTest {
         .put(ORDERUNITS, 10.0)
         .put(ARRAYCOL, ImmutableList.of(10.0, 20.0))
         .put(MAPCOL, ImmutableMap.of("key1", 10.0))
-        .put(CASE_SENSITIVE_FIELD, 1L);
+        .put(CASE_SENSITIVE_FIELD, 1L)
+        .put(TIMESTAMPFIELD, new Date(1000));
 
     deserializer = givenDeserializerForSchema(ORDER_SCHEMA, Struct.class);
   }

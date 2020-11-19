@@ -274,7 +274,6 @@ predicate[ParserRuleContext value]
 
 valueExpression
     : primaryExpression                                                                 #valueExpressionDefault
-    | valueExpression AT timeZoneSpecifier                                              #atTimeZone
     | operator=(MINUS | PLUS) valueExpression                                           #arithmeticUnary
     | left=valueExpression operator=(ASTERISK | SLASH | PERCENT) right=valueExpression  #arithmeticBinary
     | left=valueExpression operator=(PLUS | MINUS) right=valueExpression                #arithmeticBinary
@@ -297,10 +296,6 @@ primaryExpression
     | identifier '.' identifier                                                           #qualifiedColumnReference
     | base=primaryExpression STRUCT_FIELD_REF fieldName=identifier                        #dereference
     | '(' expression ')'                                                                  #parenthesizedExpression
-    ;
-
-timeZoneSpecifier
-    : TIME ZONE STRING    #timeZoneString
     ;
 
 comparisonOperator
@@ -572,14 +567,6 @@ QUOTED_IDENTIFIER
 
 BACKQUOTED_IDENTIFIER
     : '`' ( ~'`' | '``' )* '`'
-    ;
-
-TIME_WITH_TIME_ZONE
-    : 'TIME' WS 'WITH' WS 'TIME' WS 'ZONE'
-    ;
-
-TIMESTAMP_WITH_TIME_ZONE
-    : 'TIMESTAMP' WS 'WITH' WS 'TIME' WS 'ZONE'
     ;
 
 VARIABLE

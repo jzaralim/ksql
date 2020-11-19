@@ -63,6 +63,7 @@ import org.apache.kafka.connect.data.ConnectSchema;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Timestamp;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -1315,7 +1316,7 @@ public class KsqlAvroDeserializerTest {
         ChronoUnit.MILLIS.between(
             LocalDateTime.of(LocalDate.ofEpochDay(0), LocalTime.MIDNIGHT),
             LocalDateTime.now()),
-        Schema.OPTIONAL_INT64_SCHEMA
+        Timestamp.SCHEMA
     );
   }
 

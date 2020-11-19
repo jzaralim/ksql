@@ -23,8 +23,10 @@ import io.confluent.ksql.execution.expression.tree.IntegerLiteral;
 import io.confluent.ksql.execution.expression.tree.Literal;
 import io.confluent.ksql.execution.expression.tree.LongLiteral;
 import io.confluent.ksql.execution.expression.tree.StringLiteral;
+import io.confluent.ksql.execution.expression.tree.TimestampLiteral;
 import io.confluent.ksql.schema.ksql.types.SqlBaseType;
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.function.Function;
 
 /**
@@ -40,6 +42,7 @@ public final class Literals {
           .put(SqlBaseType.DECIMAL, v -> new DecimalLiteral((BigDecimal) v))
           .put(SqlBaseType.DOUBLE, v -> new DoubleLiteral((Double) v))
           .put(SqlBaseType.STRING, v -> new StringLiteral((String) v))
+          .put(SqlBaseType.TIMESTAMP, v -> new TimestampLiteral((Date) v))
           .build();
 
   private Literals() {

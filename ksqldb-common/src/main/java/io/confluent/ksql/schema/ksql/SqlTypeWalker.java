@@ -23,6 +23,7 @@ import io.confluent.ksql.schema.ksql.types.SqlDecimal;
 import io.confluent.ksql.schema.ksql.types.SqlMap;
 import io.confluent.ksql.schema.ksql.types.SqlPrimitiveType;
 import io.confluent.ksql.schema.ksql.types.SqlStruct;
+import io.confluent.ksql.schema.ksql.types.SqlTimestamp;
 import io.confluent.ksql.schema.ksql.types.SqlType;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,7 @@ public final class SqlTypeWalker {
       .put(SqlBaseType.DOUBLE, (v, t) -> v.visitDouble((SqlPrimitiveType) t))
       .put(SqlBaseType.STRING, (v, t) -> v.visitString((SqlPrimitiveType) t))
       .put(SqlBaseType.DECIMAL, (v, t) -> v.visitDecimal((SqlDecimal) t))
+      .put(SqlBaseType.TIMESTAMP, (v, t) -> v.visitTimestamp((SqlTimestamp) t))
       .put(SqlBaseType.ARRAY, SqlTypeWalker::visitArray)
       .put(SqlBaseType.MAP, SqlTypeWalker::visitMap)
       .put(SqlBaseType.STRUCT, SqlTypeWalker::visitStruct)
@@ -82,6 +84,10 @@ public final class SqlTypeWalker {
     }
 
     default S visitDecimal(final SqlDecimal type) {
+      return visitType(type);
+    }
+
+    default S visitTimestamp(final SqlTimestamp type) {
       return visitType(type);
     }
 

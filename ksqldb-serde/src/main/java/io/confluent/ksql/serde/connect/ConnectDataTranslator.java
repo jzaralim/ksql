@@ -191,7 +191,7 @@ public class ConnectDataTranslator implements DataTranslator {
       case Time.LOGICAL_NAME:
         return Time.fromLogical(connectSchema, (java.util.Date) connectValue);
       case Timestamp.LOGICAL_NAME:
-        return Timestamp.fromLogical(connectSchema, (java.util.Date) connectValue);
+        return connectValue;
       default:
         return connectValue;
     }
@@ -219,7 +219,11 @@ public class ConnectDataTranslator implements DataTranslator {
     final Object convertedValue = maybeConvertLogicalType(connectSchema, connectValue);
     switch (schema.type()) {
       case INT64:
-        return ((Number) convertedValue).longValue();
+        if (schema.name() == Timestamp.LOGICAL_NAME) {
+          return convertedValue;
+        } else {
+          return ((Number) convertedValue).longValue();
+        }
       case INT32:
         return ((Number) convertedValue).intValue();
       case FLOAT64:

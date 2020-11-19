@@ -30,6 +30,7 @@ import io.confluent.ksql.schema.ksql.types.SqlDecimal;
 import io.confluent.ksql.schema.ksql.types.SqlMap;
 import io.confluent.ksql.schema.ksql.types.SqlStruct;
 import io.confluent.ksql.schema.ksql.types.SqlStruct.Builder;
+import io.confluent.ksql.schema.ksql.types.SqlTimestamp;
 import io.confluent.ksql.schema.ksql.types.SqlType;
 import io.confluent.ksql.schema.ksql.types.SqlTypes;
 import io.confluent.ksql.util.DecimalUtil;
@@ -42,6 +43,7 @@ import java.util.function.Function;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Timestamp;
 
 /**
  * Util class for converting between KSQL's different type systems.
@@ -275,6 +277,7 @@ public final class SchemaConverters {
             .put(SqlBaseType.ARRAY, t -> ConnectFromSqlConverter.fromSqlArray((SqlArray) t))
             .put(SqlBaseType.MAP, t -> ConnectFromSqlConverter.fromSqlMap((SqlMap) t))
             .put(SqlBaseType.STRUCT, t -> ConnectFromSqlConverter.fromSqlStruct((SqlStruct) t))
+            .put(SqlBaseType.TIMESTAMP, t -> Timestamp.builder().optional())
         .build();
 
     @Override

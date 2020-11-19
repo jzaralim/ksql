@@ -24,6 +24,7 @@ import static io.confluent.ksql.schema.ksql.types.SqlBaseType.INTEGER;
 import static io.confluent.ksql.schema.ksql.types.SqlBaseType.MAP;
 import static io.confluent.ksql.schema.ksql.types.SqlBaseType.STRING;
 import static io.confluent.ksql.schema.ksql.types.SqlBaseType.STRUCT;
+import static io.confluent.ksql.schema.ksql.types.SqlBaseType.TIMESTAMP;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableMap;

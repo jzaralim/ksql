@@ -42,6 +42,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,7 @@ import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Timestamp;
 import org.hamcrest.CoreMatchers;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,6 +78,7 @@ public class KsqlJsonSerializerTest {
   private static final String ARRAYCOL = "ARRAYCOL";
   private static final String MAPCOL = "MAPCOL";
   private static final String DECIMALCOL = "DECIMALCOL";
+  private static final String TIMESTAMPCOL = "TIMESTAMPCOL";
 
   private static final Schema ORDER_SCHEMA = SchemaBuilder.struct()
       .field(ORDERTIME, Schema.OPTIONAL_INT64_SCHEMA)
@@ -91,6 +94,7 @@ public class KsqlJsonSerializerTest {
           .optional()
           .build())
       .field(DECIMALCOL, Decimal.builder(5).optional().parameter(DecimalUtil.PRECISION_FIELD, "10").build())
+      .field(TIMESTAMPCOL, Timestamp.SCHEMA)
       .build();
 
   private static final Schema ADDRESS_SCHEMA = SchemaBuilder.struct()
@@ -193,7 +197,8 @@ public class KsqlJsonSerializerTest {
         .put(ORDERUNITS, 10.0)
         .put(ARRAYCOL, Collections.singletonList(100.0))
         .put(MAPCOL, Collections.singletonMap("key1", 100.0))
-        .put(DECIMALCOL, new BigDecimal("1.12345"));
+        .put(DECIMALCOL, new BigDecimal("1.12345"))
+        .put(TIMESTAMPCOL, new Date(1000));
 
     // When:
     final byte[] bytes = serializer.serialize(SOME_TOPIC, struct);
@@ -211,7 +216,8 @@ public class KsqlJsonSerializerTest {
             + "\"ORDERUNITS\":10.0,"
             + "\"ARRAYCOL\":[100.0],"
             + "\"MAPCOL\":" + mapCol + ","
-            + "\"DECIMALCOL\":1.12345"
+            + "\"DECIMALCOL\":1.12345,"
+            + "\"TIMESTAMPCOL\":1000"
             + "}"));
   }
 

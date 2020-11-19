@@ -29,6 +29,7 @@ import io.confluent.ksql.function.types.MapType;
 import io.confluent.ksql.function.types.ParamType;
 import io.confluent.ksql.function.types.StringType;
 import io.confluent.ksql.function.types.StructType;
+import io.confluent.ksql.function.types.TimestampType;
 import io.confluent.ksql.schema.ksql.SchemaConverters;
 import io.confluent.ksql.schema.ksql.types.SqlArray;
 import io.confluent.ksql.schema.ksql.types.SqlMap;
@@ -230,6 +231,7 @@ public final class GenericsUtil {
       case ARRAY:   return schema instanceof ArrayType;
       case MAP:     return schema instanceof MapType;
       case STRUCT:  return schema instanceof StructType;
+      case TIMESTAMP: return schema instanceof TimestampType;
       default:      return false;
     }
   }

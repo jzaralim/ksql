@@ -20,6 +20,7 @@ import io.confluent.ksql.schema.ksql.PersistenceSchema;
 import io.confluent.ksql.schema.ksql.SimpleColumn;
 import io.confluent.ksql.schema.ksql.types.SqlBaseType;
 import io.confluent.ksql.schema.ksql.types.SqlDecimal;
+import io.confluent.ksql.schema.ksql.types.SqlTimestamp;
 import io.confluent.ksql.schema.ksql.types.SqlType;
 import io.confluent.ksql.serde.FormatFactory;
 import io.confluent.ksql.serde.SerdeUtils;
@@ -27,7 +28,10 @@ import io.confluent.ksql.util.DecimalUtil;
 import io.confluent.ksql.util.KsqlException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +62,7 @@ class KsqlDelimitedDeserializer implements Deserializer<List<?>> {
       .put(SqlBaseType.DOUBLE, t -> Double::parseDouble)
       .put(SqlBaseType.STRING, t -> v -> v)
       .put(SqlBaseType.DECIMAL, KsqlDelimitedDeserializer::decimalParser)
+      .put(SqlBaseType.TIMESTAMP, t -> KsqlDelimitedDeserializer::dateParser)
       .build();
 
   private final CSVFormat csvFormat;
@@ -124,6 +129,14 @@ class KsqlDelimitedDeserializer implements Deserializer<List<?>> {
   private static Parser decimalParser(final SqlType sqlType) {
     final SqlDecimal decimalType = (SqlDecimal) sqlType;
     return v -> DecimalUtil.ensureFit(new BigDecimal(v), decimalType);
+  }
+
+  private static Date dateParser(final String dateString) {
+    try{
+      return new SimpleDateFormat().parse(dateString);
+    } catch (ParseException p) {
+      return null;
+    }
   }
 
   private static List<Parser> buildParsers(final PersistenceSchema schema) {

@@ -45,6 +45,7 @@ import io.confluent.ksql.util.KsqlException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,7 @@ import org.apache.kafka.connect.data.ConnectSchema;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Timestamp;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
 import org.junit.Before;
@@ -133,6 +135,12 @@ public class KsqlAvroSerializerTest {
               + "\"scale\": 2"
               + "}");
 
+  private static final org.apache.avro.Schema TIMESTAMP_SCHEMA =
+      parseAvroSchema(
+          "{"
+              + "\"type\": \"long\","
+              + "\"logicalType\": \"timestamp-millis\""
+              + "}");
 
   private static final String SOME_TOPIC = "bob";
 
@@ -880,6 +888,17 @@ public class KsqlAvroSerializerTest {
         value,
         DECIMAL_SCHEMA,
         bytes
+    );
+  }
+
+  @Test
+  public void shouldSerializeTimestampField() {
+    final Date value = new Date(500);
+
+    shouldSerializeFieldTypeCorrectly(
+        Timestamp.builder().optional(),
+        value,
+        TIMESTAMP_SCHEMA
     );
   }
 

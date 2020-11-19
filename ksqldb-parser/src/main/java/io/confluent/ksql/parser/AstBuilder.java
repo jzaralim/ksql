@@ -1040,14 +1040,6 @@ public class AstBuilder {
     }
 
     @Override
-    public Node visitTimeZoneString(final SqlBaseParser.TimeZoneStringContext context) {
-      return new StringLiteral(
-          getLocation(context),
-          ParserUtil.unquote(context.STRING().getText(), "'")
-      );
-    }
-
-    @Override
     public Node visitParenthesizedExpression(
         final SqlBaseParser.ParenthesizedExpressionContext context) {
       return visit(context.expression());
