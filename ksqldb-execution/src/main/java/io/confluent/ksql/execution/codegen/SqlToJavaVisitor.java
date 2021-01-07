@@ -46,6 +46,7 @@ import io.confluent.ksql.execution.expression.tree.CreateStructExpression.Field;
 import io.confluent.ksql.execution.expression.tree.DecimalLiteral;
 import io.confluent.ksql.execution.expression.tree.DereferenceExpression;
 import io.confluent.ksql.execution.expression.tree.DoubleLiteral;
+import io.confluent.ksql.execution.expression.tree.DurationExpression;
 import io.confluent.ksql.execution.expression.tree.Expression;
 import io.confluent.ksql.execution.expression.tree.ExpressionVisitor;
 import io.confluent.ksql.execution.expression.tree.FunctionCall;
@@ -342,6 +343,14 @@ public class SqlToJavaVisitor {
     @Override
     public Pair<String, SqlType> visitNullLiteral(final NullLiteral node, final Void context) {
       return new Pair<>("null", null);
+    }
+
+    @Override
+    public Pair<String, SqlType> visitDurationExpression(
+        final DurationExpression node,
+        final Void context
+    ) {
+      return new Pair<>();
     }
 
     @Override

@@ -39,6 +39,8 @@ public interface ExpressionVisitor<R, C> {
 
   R visitDoubleLiteral(DoubleLiteral exp, C context);
 
+  R visitDurationExpression(DurationExpression exp, C context);
+
   R visitFunctionCall(FunctionCall exp, C context);
 
   R visitInListExpression(InListExpression exp, C context);

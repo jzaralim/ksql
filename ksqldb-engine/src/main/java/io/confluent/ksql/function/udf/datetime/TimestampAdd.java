@@ -34,7 +34,7 @@ public class TimestampAdd {
   @Udf(description = "Adds a duration to a timestamp")
   public Timestamp timestampAdd(
       @UdfParameter(description = "a TIMESTAMP value.") final Timestamp timestamp,
-      @UdfParameter(description = "a TIMESTAMP value.") final Duration duration) {
+      @UdfParameter(description = "a duration.") final Duration duration) {
     return new Timestamp(timestamp.getTime() + duration.toMillis());
   }
 }
