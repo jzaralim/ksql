@@ -36,7 +36,6 @@ import io.confluent.ksql.execution.expression.tree.CreateStructExpression;
 import io.confluent.ksql.execution.expression.tree.CreateStructExpression.Field;
 import io.confluent.ksql.execution.expression.tree.DecimalLiteral;
 import io.confluent.ksql.execution.expression.tree.DereferenceExpression;
-import io.confluent.ksql.execution.expression.tree.DurationExpression;
 import io.confluent.ksql.execution.expression.tree.Expression;
 import io.confluent.ksql.execution.expression.tree.FunctionCall;
 import io.confluent.ksql.execution.expression.tree.InListExpression;
@@ -1238,13 +1237,13 @@ public class AstBuilder {
       return new BooleanLiteral(getLocation(context), context.getText());
     }
 
-    @Override
-    public Node visitDurationExpression(final SqlBaseParser.DurationExpressionContext context) {
-      return new DurationExpression(
+    /* @Override
+    public Node visitIntervalExpression(final SqlBaseParser.IntervalExpressionContext context) {
+      return new IntervalExpression(
           (Expression) visit(context.valueExpression()),
           WindowExpression.getWindowUnit(context.windowUnit().getText().toUpperCase())
       );
-    }
+    } */
 
     @Override
     public Node visitExplain(final SqlBaseParser.ExplainContext ctx) {

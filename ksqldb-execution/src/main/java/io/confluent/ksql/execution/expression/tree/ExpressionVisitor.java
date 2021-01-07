@@ -39,8 +39,6 @@ public interface ExpressionVisitor<R, C> {
 
   R visitDoubleLiteral(DoubleLiteral exp, C context);
 
-  R visitDurationExpression(DurationExpression exp, C context);
-
   R visitFunctionCall(FunctionCall exp, C context);
 
   R visitInListExpression(InListExpression exp, C context);
@@ -48,6 +46,8 @@ public interface ExpressionVisitor<R, C> {
   R visitInPredicate(InPredicate exp, C context);
 
   R visitIntegerLiteral(IntegerLiteral exp, C context);
+
+  R visitIntervalExpression(IntervalExpression exp, C context);
 
   R visitIsNotNullPredicate(IsNotNullPredicate exp, C context);
 

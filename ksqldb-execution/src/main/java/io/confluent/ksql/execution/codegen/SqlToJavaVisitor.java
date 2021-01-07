@@ -46,13 +46,13 @@ import io.confluent.ksql.execution.expression.tree.CreateStructExpression.Field;
 import io.confluent.ksql.execution.expression.tree.DecimalLiteral;
 import io.confluent.ksql.execution.expression.tree.DereferenceExpression;
 import io.confluent.ksql.execution.expression.tree.DoubleLiteral;
-import io.confluent.ksql.execution.expression.tree.DurationExpression;
 import io.confluent.ksql.execution.expression.tree.Expression;
 import io.confluent.ksql.execution.expression.tree.ExpressionVisitor;
 import io.confluent.ksql.execution.expression.tree.FunctionCall;
 import io.confluent.ksql.execution.expression.tree.InListExpression;
 import io.confluent.ksql.execution.expression.tree.InPredicate;
 import io.confluent.ksql.execution.expression.tree.IntegerLiteral;
+import io.confluent.ksql.execution.expression.tree.IntervalExpression;
 import io.confluent.ksql.execution.expression.tree.IsNotNullPredicate;
 import io.confluent.ksql.execution.expression.tree.IsNullPredicate;
 import io.confluent.ksql.execution.expression.tree.LikePredicate;
@@ -346,11 +346,11 @@ public class SqlToJavaVisitor {
     }
 
     @Override
-    public Pair<String, SqlType> visitDurationExpression(
-        final DurationExpression node,
+    public Pair<String, SqlType> visitIntervalExpression(
+        final IntervalExpression node,
         final Void context
     ) {
-      return new Pair<>();
+      return new Pair<>("", SqlTypes.INTERVAL);
     }
 
     @Override

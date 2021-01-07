@@ -20,16 +20,16 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-public class DurationExpression extends Expression {
+public class IntervalExpression extends Expression {
 
   private final Expression expression;
   private final TimeUnit timeUnit;
 
-  public DurationExpression(final Expression expression, final TimeUnit timeUnit) {
+  public IntervalExpression(final Expression expression, final TimeUnit timeUnit) {
     this(Optional.empty(), expression, timeUnit);
   }
 
-  public DurationExpression(
+  public IntervalExpression(
       final Optional<NodeLocation> location,
       final Expression expression,
       final TimeUnit timeUnit
@@ -41,7 +41,7 @@ public class DurationExpression extends Expression {
 
   @Override
   protected <R, C> R accept(final ExpressionVisitor<R, C> visitor, final C context) {
-    return visitor.visitDurationExpression(this, context);
+    return visitor.visitIntervalExpression(this, context);
   }
 
   @Override
@@ -58,7 +58,7 @@ public class DurationExpression extends Expression {
       return false;
     }
 
-    final DurationExpression that = (DurationExpression) o;
+    final IntervalExpression that = (IntervalExpression) o;
     return Objects.equals(expression, that.expression)
         && Objects.equals(timeUnit, that.timeUnit);
   }

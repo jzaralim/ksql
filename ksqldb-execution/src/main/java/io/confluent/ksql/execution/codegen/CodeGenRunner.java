@@ -24,6 +24,7 @@ import io.confluent.ksql.execution.expression.tree.CreateStructExpression;
 import io.confluent.ksql.execution.expression.tree.DereferenceExpression;
 import io.confluent.ksql.execution.expression.tree.Expression;
 import io.confluent.ksql.execution.expression.tree.FunctionCall;
+import io.confluent.ksql.execution.expression.tree.IntervalExpression;
 import io.confluent.ksql.execution.expression.tree.LikePredicate;
 import io.confluent.ksql.execution.expression.tree.SubscriptExpression;
 import io.confluent.ksql.execution.expression.tree.TraversalExpressionVisitor;
@@ -194,6 +195,11 @@ public class CodeGenRunner {
           function.newInstance(ksqlConfig)
       );
 
+      return null;
+    }
+
+    @Override
+    public Void visitIntervalExpression(IntervalExpression exp, Void context) {
       return null;
     }
 
