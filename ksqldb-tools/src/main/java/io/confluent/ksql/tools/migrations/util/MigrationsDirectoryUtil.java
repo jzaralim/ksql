@@ -15,7 +15,6 @@
 
 package io.confluent.ksql.tools.migrations.util;
 
-import io.confluent.ksql.tools.migrations.Migration;
 import io.confluent.ksql.tools.migrations.MigrationException;
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +24,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -61,7 +59,7 @@ public final class MigrationsDirectoryUtil {
     return "V" + StringUtils.leftPad(version, 6, "0");
   }
 
-  public static Optional<String> getFilePathForVersion(
+  public static Optional<MigrationFile> getMigrationForVersion(
       final String version,
       final String migrationsDir
   ) {
@@ -77,16 +75,16 @@ public final class MigrationsDirectoryUtil {
       throw new MigrationException("Failed to retrieve files from " + migrationsDir);
     }
 
-    final List<String> matches = Arrays.stream(names)
+    final List<MigrationFile> matches = Arrays.stream(names)
         .filter(name -> name.startsWith(prefix))
+        .map(name -> getMigrationFromFilename(migrationsDir, name))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
         .collect(Collectors.toList());
-    if (matches.size() == 1) {
-      return Optional.of(Paths.get(migrationsDir, matches.get(0)).toString());
-    } else if (matches.size() == 0) {
-      return Optional.empty();
-    } else {
-      throw new MigrationException("Found multiple migration files for version " + version);
-    }
+    // throw on multiple matches
+    validateMigrationVersionsUnique(matches);
+
+    return matches.size() > 0 ? Optional.of(matches.get(0)) : Optional.empty();
   }
 
   public static String getFileContentsForName(final String filename) {
@@ -113,14 +111,14 @@ public final class MigrationsDirectoryUtil {
    */
   public static List<Integer> getAllVersions(final String migrationsDir) {
     return getAllMigrations(migrationsDir).stream()
-        .map(Migration::getVersion)
+        .map(MigrationFile::getVersion)
         .collect(Collectors.toList());
   }
 
   /**
    * @return all migration files in sorted order
    */
-  public static List<Migration> getAllMigrations(final String migrationsDir) {
+  public static List<MigrationFile> getAllMigrations(final String migrationsDir) {
     final File directory = new File(migrationsDir);
     if (!directory.isDirectory()) {
       throw new MigrationException(migrationsDir + " is not a directory.");
@@ -141,30 +139,59 @@ public final class MigrationsDirectoryUtil {
         .filter(name -> !new File(name).isDirectory())
         .collect(Collectors.toList());
 
-    final List<Migration> migrations = new ArrayList<>();
-    for (final String filename : filenames) {
-      final Matcher matcher = MIGRATION_FILE_MATCHER.matcher(filename);
-      if (!matcher.find()) {
-        LOGGER.warn("Skipping file does not match expected migration file pattern "
-            + "'V<six digit number>__<name>.sql': {}", filename);
-        continue;
-      }
+    final List<MigrationFile> migrations = filenames.stream()
+        .map(name -> getMigrationFromFilename(migrationsDir, name))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .collect(Collectors.toList());
 
-      final int version = Integer.parseInt(matcher.group(1));
-      if (version <= 0) {
-        throw new MigrationException(
-            "Migration file versions must be positive. Found: " + filename);
-      }
-
-      final String description = matcher.group(2).replace('_', ' ');
-
-      migrations.add(new Migration(
-          version,
-          description,
-          migrationsDir + "/" + filename
-      ));
-    }
+    validateMigrationVersionsUnique(migrations);
 
     return migrations;
+  }
+
+  private static Optional<MigrationFile> getMigrationFromFilename(
+      final String migrationsDir,
+      final String filename
+  ) {
+    final Matcher matcher = MIGRATION_FILE_MATCHER.matcher(filename);
+    if (!matcher.find()) {
+      LOGGER.warn("Skipping file does not match expected migration file pattern "
+          + "'V<six digit number>__<name>.sql': {}", filename);
+      return Optional.empty();
+    }
+
+    final int version = Integer.parseInt(matcher.group(1));
+    if (version <= 0) {
+      throw new MigrationException(
+          "MigrationFile file versions must be positive. Found: " + filename);
+    }
+
+    final String description = matcher.group(2).replace('_', ' ');
+
+    return Optional.of(new MigrationFile(
+        version,
+        description,
+        Paths.get(migrationsDir, filename).toString()
+    ));
+  }
+
+  private static void validateMigrationVersionsUnique(final List<MigrationFile> migrations) {
+    if (migrations.size() == 0) {
+      return;
+    }
+
+    MigrationFile previous = migrations.get(0);
+    for (int i = 1; i < migrations.size(); i++) {
+      if (migrations.get(i).getVersion() == previous.getVersion()) {
+        throw new MigrationException(String.format(
+            "Found multiple migration files with the same version. Version: %d. Files: '%s', '%s'",
+            migrations.get(i).getVersion(),
+            migrations.get(i).getFilepath(),
+            previous.getFilepath()
+        ));
+      }
+      previous = migrations.get(i);
+    }
   }
 }

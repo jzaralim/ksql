@@ -16,25 +16,28 @@
 package io.confluent.ksql.tools.migrations.commands;
 
 import static io.confluent.ksql.tools.migrations.util.MigrationsDirectoryUtil.getAllMigrations;
+import static io.confluent.ksql.tools.migrations.util.MigrationsDirectoryUtil.getMigrationForVersion;
 import static io.confluent.ksql.tools.migrations.util.MigrationsDirectoryUtil.getMigrationsDirFromConfigFile;
 
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
-import com.github.rvesse.airline.annotations.restrictions.MutuallyExclusiveWith;
+import com.github.rvesse.airline.annotations.restrictions.RequireOnlyOne;
 import com.google.common.annotations.VisibleForTesting;
 import io.confluent.ksql.api.client.Client;
-import io.confluent.ksql.tools.migrations.Migration;
 import io.confluent.ksql.tools.migrations.MigrationConfig;
 import io.confluent.ksql.tools.migrations.MigrationException;
 import io.confluent.ksql.tools.migrations.util.MetadataUtil;
 import io.confluent.ksql.tools.migrations.util.MetadataUtil.MigrationState;
+import io.confluent.ksql.tools.migrations.util.MigrationFile;
 import io.confluent.ksql.tools.migrations.util.MigrationsDirectoryUtil;
 import io.confluent.ksql.tools.migrations.util.MigrationsUtil;
 import io.confluent.ksql.util.KsqlException;
 import io.confluent.ksql.util.RetryUtil;
 import java.time.Clock;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -56,7 +59,7 @@ public class ApplyMigrationCommand extends BaseCommand {
       name = {"-a", "--all"},
       description = "run all available migrations"
   )
-  @MutuallyExclusiveWith(tag = "target")
+  @RequireOnlyOne(tag = "target")
   private boolean all;
 
   @Option(
@@ -64,16 +67,25 @@ public class ApplyMigrationCommand extends BaseCommand {
       name = {"-n", "--next"},
       description = "migrate the next available version"
   )
-  @MutuallyExclusiveWith(tag = "target")
+  @RequireOnlyOne(tag = "target")
   private boolean next;
 
   @Option(
-      title = "version",
+      title = "untilVersion",
       name = {"-u", "--until"},
       arity = 1,
       description = "migrate until the specified version"
   )
-  @MutuallyExclusiveWith(tag = "target")
+  @RequireOnlyOne(tag = "target")
+  private int untilVersion;
+
+  @Option(
+      title = "untilVersion",
+      name = {"-v", "--version"},
+      arity = 1,
+      description = "apply the migration with the specified version"
+  )
+  @RequireOnlyOne(tag = "target")
   private int version;
 
   @Override
@@ -105,8 +117,12 @@ public class ApplyMigrationCommand extends BaseCommand {
       final String migrationsDir,
       final Clock clock
   ) {
+    if (untilVersion < 0) {
+      LOGGER.error("'until' migration version must be positive. Got: {}", untilVersion);
+      return 1;
+    }
     if (version < 0) {
-      LOGGER.error("Optional migration version must be positive. Got: {}", version);
+      LOGGER.error("migration version to apply must be positive. Got: {}", version);
       return 1;
     }
 
@@ -125,7 +141,7 @@ public class ApplyMigrationCommand extends BaseCommand {
 
     boolean success;
     try {
-      success = ValidateMigrationsCommand.validate(config, migrationsDir, ksqlClient)
+      success = validateCurrentState(config, ksqlClient, migrationsDir)
           && apply(config, ksqlClient, migrationsDir, clock);
     } catch (MigrationException e) {
       LOGGER.error(e.getMessage());
@@ -149,17 +165,9 @@ public class ApplyMigrationCommand extends BaseCommand {
         : Integer.parseInt(previous) + 1;
 
     LOGGER.info("Loading migration files");
-    final List<Migration> migrations;
+    final List<MigrationFile> migrations;
     try {
-      migrations = getAllMigrations(migrationsDir).stream()
-          .filter(migration -> {
-            if (version > 0) {
-              return migration.getVersion() <= version && migration.getVersion() >= minimumVersion;
-            } else {
-              return migration.getVersion() >= minimumVersion;
-            }
-          })
-          .collect(Collectors.toList());
+      migrations = loadMigrationsToApply(migrationsDir, minimumVersion);
     } catch (MigrationException e) {
       LOGGER.error(e.getMessage());
       return false;
@@ -168,31 +176,69 @@ public class ApplyMigrationCommand extends BaseCommand {
     if (migrations.size() == 0) {
       LOGGER.info("No eligible migrations found.");
     } else {
-      LOGGER.info(migrations.size() + " migration files loaded.");
+      LOGGER.info(migrations.size() + " migration file(s) loaded.");
     }
 
-    for (Migration migration : migrations) {
+    for (MigrationFile migration : migrations) {
       if (!applyMigration(config, ksqlClient, migration, clock, previous)) {
         return false;
       }
       previous = Integer.toString(migration.getVersion());
     }
+
     return true;
+  }
+
+  private List<MigrationFile> loadMigrationsToApply(
+      final String migrationsDir,
+      final int minimumVersion
+  ) {
+    if (version > 0) {
+      final Optional<MigrationFile> migration =
+          getMigrationForVersion(String.valueOf(version), migrationsDir);
+      if (!migration.isPresent()) {
+        throw new MigrationException("No migration file with version " + version + " exists.");
+      }
+      return Collections.singletonList(migration.get());
+    }
+
+    final List<MigrationFile> migrations = getAllMigrations(migrationsDir).stream()
+        .filter(migration -> {
+          if (migration.getVersion() < minimumVersion) {
+            return false;
+          }
+          if (untilVersion > 0) {
+            return migration.getVersion() <= untilVersion;
+          } else {
+            return true;
+          }
+        })
+        .collect(Collectors.toList());
+
+    if (next) {
+      if (migrations.size() == 0) {
+        throw new MigrationException("No eligible migrations found.");
+      }
+      return Collections.singletonList(migrations.get(0));
+    }
+
+    return migrations;
   }
 
   private boolean applyMigration(
       final MigrationConfig config,
       final Client ksqlClient,
-      final Migration migration,
+      final MigrationFile migration,
       final Clock clock,
       final String previous
   ) {
-    LOGGER.info("Applying " + migration.getName() + " version " + migration.getVersion());
+    LOGGER.info("Applying migration version {}: {}", migration.getVersion(), migration.getName());
     final String migrationFileContent =
         MigrationsDirectoryUtil.getFileContentsForName(migration.getFilepath());
-    LOGGER.info(migrationFileContent);
+    LOGGER.info("MigrationFile file contents:\n{}", migrationFileContent);
 
     if (dryRun) {
+      LOGGER.info("Dry run complete. No migrations were actually applied.");
       return true;
     }
 
@@ -205,26 +251,31 @@ public class ApplyMigrationCommand extends BaseCommand {
 
     if (
         !updateState(config, ksqlClient, MigrationState.RUNNING,
-            executionStart, migration, clock, previous)
+            executionStart, migration, clock, previous, Optional.empty())
     ) {
       return false;
     }
 
-    try {
-      final List<String> commands = Arrays.stream(migrationFileContent.split(";"))
-          .filter(s -> s.length() > 1)
-          .collect(Collectors.toList());
-      for (final String command : commands) {
-        ksqlClient.executeStatement(command + ";").get();
+    final List<String> commands = Arrays.stream(migrationFileContent.split(";"))
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .map(s -> s + ";")
+        .collect(Collectors.toList());
+    for (final String command : commands) {
+      try {
+        ksqlClient.executeStatement(command).get();
+      } catch (InterruptedException | ExecutionException e) {
+        final String errorMsg = String.format(
+            "Failed to execute sql: %s. Error: %s", command, e.getMessage());
+        LOGGER.error(errorMsg);
+        updateState(config, ksqlClient, MigrationState.ERROR,
+            executionStart, migration, clock, previous, Optional.of(errorMsg));
+        return false;
       }
-    } catch (InterruptedException | ExecutionException e) {
-      LOGGER.error(e.getMessage());
-      updateState(config, ksqlClient, MigrationState.ERROR,
-          executionStart, migration, clock, previous);
-      return false;
     }
+
     updateState(config, ksqlClient, MigrationState.MIGRATED,
-        executionStart, migration, clock, previous);
+        executionStart, migration, clock, previous, Optional.empty());
     LOGGER.info("Successfully migrated");
     return true;
   }
@@ -265,9 +316,10 @@ public class ApplyMigrationCommand extends BaseCommand {
       final Client ksqlClient,
       final MigrationState state,
       final String executionStart,
-      final Migration migration,
+      final MigrationFile migration,
       final Clock clock,
-      final String previous
+      final String previous,
+      final Optional<String> errorReason
   ) {
     final String executionEnd = (state == MigrationState.MIGRATED || state == MigrationState.ERROR)
         ? Long.toString(clock.millis())
@@ -283,7 +335,8 @@ public class ApplyMigrationCommand extends BaseCommand {
           executionEnd,
           migration,
           previous,
-          checksum
+          checksum,
+          errorReason
       ).get();
       MetadataUtil.writeRow(
           config,
@@ -294,7 +347,8 @@ public class ApplyMigrationCommand extends BaseCommand {
           executionEnd,
           migration,
           previous,
-          checksum
+          checksum,
+          errorReason
       ).get();
       return true;
     } catch (InterruptedException | ExecutionException e) {
@@ -306,5 +360,14 @@ public class ApplyMigrationCommand extends BaseCommand {
   @Override
   protected Logger getLogger() {
     return LOGGER;
+  }
+
+  private static boolean validateCurrentState(
+      final MigrationConfig config,
+      final Client ksqlClient,
+      final String migrationsDir
+  ) {
+    LOGGER.info("Validating current migration state before applying new migrations");
+    return ValidateMigrationsCommand.validate(config, migrationsDir, ksqlClient);
   }
 }

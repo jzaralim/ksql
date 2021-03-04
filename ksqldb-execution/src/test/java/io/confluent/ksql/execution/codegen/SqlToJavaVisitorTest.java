@@ -55,6 +55,7 @@ import io.confluent.ksql.execution.expression.tree.FunctionCall;
 import io.confluent.ksql.execution.expression.tree.InListExpression;
 import io.confluent.ksql.execution.expression.tree.InPredicate;
 import io.confluent.ksql.execution.expression.tree.IntegerLiteral;
+import io.confluent.ksql.execution.expression.tree.IntervalUnit;
 import io.confluent.ksql.execution.expression.tree.LambdaFunctionCall;
 import io.confluent.ksql.execution.expression.tree.LambdaVariable;
 import io.confluent.ksql.execution.expression.tree.LikePredicate;
@@ -84,6 +85,7 @@ import io.confluent.ksql.util.KsqlConfig;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
 import org.junit.Rule;
@@ -859,6 +861,18 @@ public class SqlToJavaVisitorTest {
   }
 
   @Test
+  public void shouldGenerateCorrectCodeForIntervalUnit() {
+    // Given:
+    final IntervalUnit intervalUnit = new IntervalUnit(TimeUnit.DAYS);
+
+    // When:
+    final String java = sqlToJavaVisitor.process(intervalUnit);
+
+    // Then:
+    assertThat(java, containsString("TimeUnit.DAYS"));
+  }
+
+  @Test
   public void shouldThrowOnQualifiedColumnReference() {
     // Given:
     final Expression expression = new QualifiedColumnReferenceExp(
@@ -1046,8 +1060,8 @@ public class SqlToJavaVisitorTest {
             ArrayType.of(ParamTypes.DOUBLE),
             ParamTypes.DOUBLE,
             LambdaType.of(
-                ImmutableList.of(ParamTypes.DOUBLE, ParamTypes.DOUBLE),
-                ParamTypes.DOUBLE))
+                ImmutableList.of(ParamTypes.DOUBLE, ParamTypes.INTEGER),
+                ParamTypes.INTEGER))
         );
 
     final Expression expression = new ArithmeticBinaryExpression(
@@ -1111,17 +1125,6 @@ public class SqlToJavaVisitorTest {
                 + "})) + B);\n"
                 + " }\n"
                 + "})) + 5)"));
-  }
-
-  @Test
-  public void shouldThrowErrorOnEmptyLambdaInput() {
-    // Given:
-    final Expression expression = new LambdaFunctionCall(
-        ImmutableList.of("x"),
-        (new FunctionCall(FunctionName.of("ABS"), ImmutableList.of(new LambdaVariable("X")))));
-
-    // When:
-    assertThrows(IllegalArgumentException.class, () -> sqlToJavaVisitor.process(expression));
   }
 
   @Test

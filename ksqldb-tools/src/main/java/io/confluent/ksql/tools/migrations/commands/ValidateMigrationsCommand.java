@@ -19,7 +19,7 @@ import static io.confluent.ksql.tools.migrations.util.MetadataUtil.getInfoForVer
 import static io.confluent.ksql.tools.migrations.util.MetadataUtil.getLatestMigratedVersion;
 import static io.confluent.ksql.tools.migrations.util.MetadataUtil.validateVersionIsMigrated;
 import static io.confluent.ksql.tools.migrations.util.MigrationsDirectoryUtil.computeHashForFile;
-import static io.confluent.ksql.tools.migrations.util.MigrationsDirectoryUtil.getFilePathForVersion;
+import static io.confluent.ksql.tools.migrations.util.MigrationsDirectoryUtil.getMigrationForVersion;
 import static io.confluent.ksql.tools.migrations.util.MigrationsDirectoryUtil.getMigrationsDirFromConfigFile;
 
 import com.github.rvesse.airline.annotations.Command;
@@ -30,7 +30,7 @@ import io.confluent.ksql.tools.migrations.MigrationConfig;
 import io.confluent.ksql.tools.migrations.MigrationException;
 import io.confluent.ksql.tools.migrations.util.MetadataUtil;
 import io.confluent.ksql.tools.migrations.util.MetadataUtil.MigrationState;
-import io.confluent.ksql.tools.migrations.util.MetadataUtil.VersionInfo;
+import io.confluent.ksql.tools.migrations.util.MigrationVersionInfo;
 import io.confluent.ksql.tools.migrations.util.MigrationsUtil;
 import io.confluent.ksql.util.KsqlException;
 import java.util.NoSuchElementException;
@@ -127,14 +127,14 @@ public class ValidateMigrationsCommand extends BaseCommand {
     String version = getLatestMigratedVersion(config, ksqlClient);
     String nextVersion = null;
     while (!version.equals(MetadataUtil.NONE_VERSION)) {
-      final VersionInfo versionInfo = getInfoForVersion(version, config, ksqlClient);
+      final MigrationVersionInfo versionInfo = getInfoForVersion(version, config, ksqlClient);
       if (nextVersion != null) {
         validateVersionIsMigrated(version, versionInfo, nextVersion);
       }
 
       final String filename;
       try {
-        filename = getFilePathForVersion(version, migrationsDir).get();
+        filename = getMigrationForVersion(version, migrationsDir).get().getFilepath();
       } catch (MigrationException | NoSuchElementException e) {
         LOGGER.error("No migrations file found for version with status {}. Version: {}",
             MigrationState.MIGRATED, version);
