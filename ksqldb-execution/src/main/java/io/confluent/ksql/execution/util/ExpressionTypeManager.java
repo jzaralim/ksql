@@ -21,6 +21,7 @@ import io.confluent.ksql.execution.expression.tree.ArithmeticBinaryExpression;
 import io.confluent.ksql.execution.expression.tree.ArithmeticUnaryExpression;
 import io.confluent.ksql.execution.expression.tree.BetweenPredicate;
 import io.confluent.ksql.execution.expression.tree.BooleanLiteral;
+import io.confluent.ksql.execution.expression.tree.BytesLiteral;
 import io.confluent.ksql.execution.expression.tree.Cast;
 import io.confluent.ksql.execution.expression.tree.ComparisonExpression;
 import io.confluent.ksql.execution.expression.tree.CreateArrayExpression;
@@ -600,6 +601,14 @@ public class ExpressionTypeManager {
     ) {
       context.setSqlType(DecimalUtil.fromValue(decimalLiteral.getValue()));
 
+      return null;
+    }
+
+    @Override
+    public Void visitBytesLiteral(
+        final BytesLiteral bytesLiteral, final Context context
+    ) {
+      context.setSqlType(SqlTypes.BYTES);
       return null;
     }
 

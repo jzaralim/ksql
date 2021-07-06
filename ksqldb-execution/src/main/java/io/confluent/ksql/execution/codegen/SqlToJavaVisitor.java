@@ -40,6 +40,7 @@ import io.confluent.ksql.execution.expression.tree.ArithmeticBinaryExpression;
 import io.confluent.ksql.execution.expression.tree.ArithmeticUnaryExpression;
 import io.confluent.ksql.execution.expression.tree.BetweenPredicate;
 import io.confluent.ksql.execution.expression.tree.BooleanLiteral;
+import io.confluent.ksql.execution.expression.tree.BytesLiteral;
 import io.confluent.ksql.execution.expression.tree.Cast;
 import io.confluent.ksql.execution.expression.tree.ComparisonExpression;
 import io.confluent.ksql.execution.expression.tree.CreateArrayExpression;
@@ -110,6 +111,7 @@ import io.confluent.ksql.util.Pair;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -147,6 +149,8 @@ public class SqlToJavaVisitor {
       "com.google.common.collect.ImmutableList",
       "com.google.common.collect.ImmutableMap",
       "java.util.function.Supplier",
+      "java.util.Base64",
+      "java.nio.ByteBuffer",
       Function.class.getCanonicalName(),
       BiFunction.class.getCanonicalName(),
       TriFunction.class.getCanonicalName(),
@@ -397,6 +401,18 @@ public class SqlToJavaVisitor {
       return new Pair<>(
           "new BigDecimal(\"" + decimalLiteral.getValue() + "\")",
           DecimalUtil.fromValue(decimalLiteral.getValue())
+      );
+    }
+
+    @Override
+    public Pair<String, SqlType> visitBytesLiteral(
+        final BytesLiteral bytesLiteral,
+        final Context context
+    ) {
+      ByteBuffer.
+      return new Pair<>(
+          "ByteBuffer.wrap(" + bytesLiteral.getValue(). + ")",
+          SqlTypes.BYTES
       );
     }
 

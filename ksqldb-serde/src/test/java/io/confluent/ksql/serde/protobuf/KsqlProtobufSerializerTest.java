@@ -16,11 +16,24 @@
 package io.confluent.ksql.serde.protobuf;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.primitives.Bytes;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.BytesValue;
+import com.google.protobuf.DescriptorProtos.FileDescriptorProto;
 import com.google.protobuf.Descriptors;
+import com.google.protobuf.Descriptors.Descriptor;
+import com.google.protobuf.Descriptors.DescriptorValidationException;
+import com.google.protobuf.Descriptors.FieldDescriptor.Type;
+import com.google.protobuf.Descriptors.FileDescriptor;
+import com.google.protobuf.DynamicMessage;
+import com.google.protobuf.Field;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.Timestamp;
 import com.google.type.Date;
 import com.google.type.TimeOfDay;
+import io.confluent.ksql.schema.ksql.types.SqlTypes;
+import java.util.Collections;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.connect.data.ConnectSchema;
@@ -87,6 +100,10 @@ public class KsqlProtobufSerializerTest {
               "import \"google/protobuf/timestamp.proto\";\n" +
               "\n" +
               "message ConnectDefault1 {google.protobuf.Timestamp F1 = 1;}\n");
+  private static final ParsedSchema BYTES_SCHEMA =
+      parseProtobufSchema(
+          "syntax = \"proto3\";\n" +
+              "message ConnectDefault1 {bytes F1 = 1;}\n");
 
   private static final String SOME_TOPIC = "bob";
 
@@ -104,6 +121,18 @@ public class KsqlProtobufSerializerTest {
     );
 
     deserializer = new KafkaProtobufDeserializer(schemaRegistryClient, configs);
+  }
+
+  @Test
+  public void shouldSerializeBytesField() {
+    final byte[] bytes = "abc".getBytes();
+    System.out.println(ByteString.copyFrom(bytes));
+    shouldSerializeFieldTypeCorrectly(
+        Schema.BYTES_SCHEMA,
+        bytes,
+        BYTES_SCHEMA,
+        BytesValue.of(ByteString.copyFrom(bytes))
+    );
   }
 
   @Test

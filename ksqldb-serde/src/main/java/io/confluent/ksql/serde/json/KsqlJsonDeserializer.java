@@ -36,7 +36,9 @@ import io.confluent.ksql.schema.connect.SqlSchemaFormatter;
 import io.confluent.ksql.serde.SerdeUtils;
 import io.confluent.ksql.util.DecimalUtil;
 import io.confluent.ksql.util.KsqlException;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -48,6 +50,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.connect.data.ConnectSchema;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Field;
@@ -213,6 +216,12 @@ public class KsqlJsonDeserializer<T> implements Deserializer<T> {
 
       if (context.val instanceof TextNode) {
         return DecimalUtil.ensureFit(new BigDecimal(context.val.textValue()), context.schema);
+      }
+    } else {
+      try {
+        return ByteBuffer.wrap(context.val.binaryValue());
+      } catch (IOException e) {
+        throw invalidConversionException(context.val, context.schema);
       }
     }
 

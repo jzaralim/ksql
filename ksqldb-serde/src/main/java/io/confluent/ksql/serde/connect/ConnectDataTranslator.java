@@ -19,12 +19,14 @@ import io.confluent.ksql.serde.SerdeUtils;
 import io.confluent.ksql.util.DecimalUtil;
 import io.confluent.ksql.util.KsqlPreconditions;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Field;
@@ -153,6 +155,7 @@ public class ConnectDataTranslator implements DataTranslator {
       case BOOLEAN:
       case ARRAY:
       case MAP:
+      case BYTES:
       case STRUCT:
         validateType(pathStr, schema, connectSchema);
         break;
@@ -168,9 +171,6 @@ public class ConnectDataTranslator implements DataTranslator {
       case FLOAT64:
         validateType(pathStr, schema, connectSchema, FLOAT64_ACCEPTABLE_TYPES);
         break;
-      case BYTES:
-        validateType(pathStr, schema, connectSchema, s -> Decimal.LOGICAL_NAME.equals(s.name()));
-        break;
       default:
         throw new RuntimeException(
             "Unexpected data type seen in schema: " + schema.type().getName());
@@ -185,8 +185,6 @@ public class ConnectDataTranslator implements DataTranslator {
       return connectValue;
     }
     switch  (connectSchema.name()) {
-      case Decimal.LOGICAL_NAME:
-        return connectValue;
       case Date.LOGICAL_NAME:
         return Date.fromLogical(connectSchema, (java.util.Date) connectValue);
       case Time.LOGICAL_NAME:
@@ -238,7 +236,11 @@ public class ConnectDataTranslator implements DataTranslator {
       case FLOAT64:
         return ((Number) convertedValue).doubleValue();
       case BYTES:
-        return toKsqlBytes(convertedValue, connectSchema);
+        if (DecimalUtil.isDecimal(schema)) {
+          return convertedValue;
+        } else {
+          return convertedValue;
+        }
       case ARRAY:
         return toKsqlArray(
             schema.valueSchema(), connectSchema.valueSchema(), (List) convertedValue, pathStr);
@@ -254,17 +256,6 @@ public class ConnectDataTranslator implements DataTranslator {
       default:
         return convertedValue;
     }
-  }
-
-  private Object toKsqlBytes(
-      final Object convertedValue,
-      final Schema schema
-  ) {
-    KsqlPreconditions.checkArgument(DecimalUtil.isDecimal(schema), "BYTES type must be DECIMAL");
-    KsqlPreconditions.checkArgument(convertedValue instanceof BigDecimal,
-        "must serialize decimal type as BigDecimal. Got: " + convertedValue.getClass());
-
-    return convertedValue;
   }
 
   private List<?> toKsqlArray(

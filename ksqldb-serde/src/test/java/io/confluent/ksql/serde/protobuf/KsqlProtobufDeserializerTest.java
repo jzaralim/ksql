@@ -147,6 +147,26 @@ public class KsqlProtobufDeserializerTest {
     assertThat(result, is(value));
   }
 
+  @Test
+  public void shouldDeserializeBytesField() {
+    final ConnectSchema schema = (ConnectSchema) SchemaBuilder.struct()
+        .field("f0", Schema.BYTES_SCHEMA)
+        .build();
+
+    // Given:
+    final Deserializer<Struct> deserializer =
+        givenDeserializerForSchema(schema,
+            Struct.class);
+    final Struct value = new Struct(schema).put("f0", "abc".getBytes());
+    final byte[] bytes = givenConnectSerialized(value, schema);
+
+    // When:
+    final Object result = deserializer.deserialize(SOME_TOPIC, bytes);
+
+    // Then:
+    assertThat(result, is(value));
+  }
+
   private byte[] givenConnectSerialized(
           final Object value,
           final Schema connectSchema

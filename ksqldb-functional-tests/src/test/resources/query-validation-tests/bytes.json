@@ -1,0 +1,62 @@
+{
+  "comments": ["tests for decimal functionality"],
+  "tests": [
+    {
+      "name": "DELIMITED in/out",
+      "statements": [
+        "CREATE STREAM TEST (ID STRING KEY, b BYTES) WITH (kafka_topic='test', value_format='DELIMITED');",
+        "CREATE STREAM TEST2 AS SELECT * FROM TEST;"
+      ],
+      "inputs": [
+        {"topic": "test", "value": "abcdefg"},
+        {"topic": "test", "value": "12345"},
+        {"topic": "test", "value": "true"}
+      ],
+      "outputs": [
+        {"topic": "TEST2", "value": "abcdefg"},
+        {"topic": "TEST2", "value": "12345"},
+        {"topic": "TEST2", "value": "true"}
+      ]
+    },
+    {
+      "name": "AVRO in/out",
+      "statements": [
+        "CREATE STREAM TEST (ID STRING KEY, b BYTES) WITH (kafka_topic='test', value_format='AVRO');",
+        "CREATE STREAM TEST2 AS SELECT * FROM TEST;",
+        "CREATE STREAM TEST3 AS SELECT * FROM TEST2;"
+      ],
+      "inputs": [
+        {"topic": "test", "value": {"B": "aaa"}}
+      ],
+      "outputs": [
+        {"topic": "TEST3", "value": {"B": "aaa"}}
+      ]
+    },
+    {
+      "name": "JSON in/out",
+      "statements": [
+        "CREATE STREAM TEST (ID STRING KEY, b BYTES) WITH (kafka_topic='test', value_format='JSON');",
+        "CREATE STREAM TEST2 AS SELECT * FROM TEST;"
+      ],
+      "inputs": [
+        {"topic": "test", "value": {"B": "dmFyaWF0aW9ucw=="}}
+      ],
+      "outputs": [
+        {"topic": "TEST2", "value": {"B": "dmFyaWF0aW9ucw=="}}
+      ]
+    },
+    {
+      "name": "PROTOBUF in/out",
+      "statements": [
+        "CREATE STREAM TEST (ID STRING KEY, b BYTES) WITH (kafka_topic='test', value_format='PROTOBUF');",
+        "CREATE STREAM TEST2 AS SELECT * FROM TEST;"
+      ],
+      "inputs": [
+        {"topic": "test", "value": {"B": "aaa"}}
+      ],
+      "outputs": [
+        {"topic": "TEST2", "value": {"B": "aaa"}}
+      ]
+    }
+  ]
+}

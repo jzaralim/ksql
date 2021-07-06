@@ -36,10 +36,12 @@ import io.confluent.ksql.schema.ksql.types.SqlTypes;
 import io.confluent.ksql.util.DecimalUtil;
 import io.confluent.ksql.util.KsqlException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
@@ -244,9 +246,12 @@ public final class SchemaConverters {
       return handler.apply(schema);
     }
 
-    private static SqlDecimal handleBytes(final Schema schema) {
-      DecimalUtil.requireDecimal(schema);
-      return SqlDecimal.of(DecimalUtil.precision(schema), DecimalUtil.scale(schema));
+    private static SqlType handleBytes(final Schema schema) {
+      if (DecimalUtil.isDecimal(schema)) {
+        return SqlDecimal.of(DecimalUtil.precision(schema), DecimalUtil.scale(schema));
+      } else {
+        return SqlTypes.BYTES;
+      }
     }
 
     private static SqlArray toSqlArray(final Schema schema) {
@@ -293,6 +298,7 @@ public final class SchemaConverters {
             .put(SqlBaseType.TIME, t -> Time.builder().optional())
             .put(SqlBaseType.DATE, t -> Date.builder().optional())
             .put(SqlBaseType.TIMESTAMP, t -> Timestamp.builder().optional())
+            .put(SqlBaseType.BYTES, t -> SchemaBuilder.bytes().optional())
         .build();
 
     @Override
@@ -360,6 +366,7 @@ public final class SchemaConverters {
         .put(java.sql.Time.class, SqlBaseType.TIME)
         .put(java.sql.Date.class, SqlBaseType.DATE)
         .put(java.sql.Timestamp.class, SqlBaseType.TIMESTAMP)
+        .put(ByteBuffer.class, SqlBaseType.BYTES)
         .build();
 
     @Override
@@ -400,6 +407,7 @@ public final class SchemaConverters {
             .put(ParamTypes.TIME, SqlTypes.TIME)
             .put(ParamTypes.DATE, SqlTypes.DATE)
             .put(ParamTypes.TIMESTAMP, SqlTypes.TIMESTAMP)
+            .put(ParamTypes.BYTES, SqlTypes.BYTES)
             .build();
 
     @Override
@@ -444,6 +452,7 @@ public final class SchemaConverters {
             .put(ParamTypes.TIME, SqlBaseType.TIME)
             .put(ParamTypes.DATE, SqlBaseType.DATE)
             .put(ParamTypes.TIMESTAMP, SqlBaseType.TIMESTAMP)
+            .put(ParamTypes.BYTES, SqlBaseType.BYTES)
             .build();
 
     @Override

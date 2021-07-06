@@ -16,6 +16,7 @@
 package io.confluent.ksql.serde.avro;
 
 import static org.apache.kafka.connect.data.Schema.OPTIONAL_BOOLEAN_SCHEMA;
+import static org.apache.kafka.connect.data.Schema.OPTIONAL_BYTES_SCHEMA;
 import static org.apache.kafka.connect.data.Schema.OPTIONAL_FLOAT64_SCHEMA;
 import static org.apache.kafka.connect.data.Schema.OPTIONAL_INT32_SCHEMA;
 import static org.apache.kafka.connect.data.Schema.OPTIONAL_INT64_SCHEMA;
@@ -48,9 +49,11 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import org.apache.avro.Conversions;
 import org.apache.avro.Conversions.DecimalConversion;
 import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema.Type;
+import org.apache.avro.SchemaBuilder.BytesBuilder;
 import org.apache.avro.SchemaBuilder.FieldAssembler;
 import org.apache.avro.generic.GenericArray;
 import org.apache.avro.generic.GenericData;
@@ -62,6 +65,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.connect.data.ConnectSchema;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Schema;
@@ -69,6 +73,7 @@ import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.data.Time;
 import org.apache.kafka.connect.data.Timestamp;
+import org.apache.kafka.connect.storage.StringConverter;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
 import org.junit.Before;
@@ -108,6 +113,9 @@ public class KsqlAvroSerializerTest {
 
   private static final org.apache.avro.Schema STRING_AVRO_SCHEMA =
       parseAvroSchema("{\"type\": \"string\"}");
+
+  private static final org.apache.avro.Schema BYTES_SCHEMA =
+      parseAvroSchema("{\"type\": \"bytes\"}");
 
   private static final org.apache.avro.Schema BOOLEAN_ARRAY_AVRO_SCHEMA =
       parseAvroSchema("{\"type\": \"array\", \"items\": [\"null\", \"boolean\"]}]");
@@ -947,6 +955,16 @@ public class KsqlAvroSerializerTest {
         value,
         DECIMAL_SCHEMA,
         bytes
+    );
+  }
+
+  @Test
+  public void shouldSerializeBytesField() {
+    shouldSerializeFieldTypeCorrectly(
+        OPTIONAL_BYTES_SCHEMA,
+        "abc".getBytes(),
+        org.apache.avro.SchemaBuilder.builder().bytesType(),
+        "abc"
     );
   }
 

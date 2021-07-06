@@ -52,6 +52,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import org.apache.avro.Conversions.DecimalConversion;
 import org.apache.avro.LogicalTypes;
+import org.apache.avro.LogicalTypes.Decimal;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericData.Record;
@@ -98,6 +99,12 @@ public class KsqlAvroDeserializerTest {
 
   private static final org.apache.avro.Schema OPTIONAL_DOUBLE_AVRO_SCHEMA =
       parseAvroSchema("[\"null\", \"double\"]");
+
+  private static final org.apache.avro.Schema BYTES_AVRO_SCHEMA =
+      parseAvroSchema("{\"type\": \"bytes\"}");
+
+  private static final org.apache.avro.Schema OPTIONAL_BYTES_AVRO_SCHEMA =
+      parseAvroSchema("[\"null\", \"bytes\"]");
 
   private static final org.apache.avro.Schema DECIMAL_AVRO_SCHEMA =
       parseAvroSchema("{"
@@ -1355,6 +1362,30 @@ public class KsqlAvroDeserializerTest {
   }
 
   @Test
+  public void shouldDeserializeAvroBytes() {
+    // Given:
+    final Deserializer<byte[]> deserializer =
+        givenDeserializerForSchema((ConnectSchema) Schema.OPTIONAL_BYTES_SCHEMA, byte[].class);
+
+    final Map<org.apache.avro.Schema, Object> validCoercions = ImmutableMap
+        .<org.apache.avro.Schema, Object>builder()
+        .put(BYTES_AVRO_SCHEMA, "abc".getBytes())
+        .put(OPTIONAL_BYTES_AVRO_SCHEMA, "def".getBytes())
+        .build();
+
+    validCoercions.forEach((schema, value) -> {
+
+      final byte[] bytes = givenAvroSerialized(value, schema);
+
+      // When:
+      final Object result = deserializer.deserialize(SOME_TOPIC, bytes);
+
+      // Then:
+      assertThat(result, is(value));
+    });
+  }
+
+  @Test
   public void shouldDeserializeUnionFieldToStruct() {
     final org.apache.avro.Schema avroSchema = org.apache.avro.SchemaBuilder.unionOf()
         .intType().and()
@@ -1628,13 +1659,17 @@ public class KsqlAvroDeserializerTest {
 
     switch (schema.getType()) {
       case BYTES:
-        KsqlPreconditions.checkArgument(
-            value instanceof BigDecimal, "expected BigDecimal BYTES value");
-        final BigDecimal decimal = (BigDecimal) value;
-        return new DecimalConversion().toBytes(
-            decimal,
-            avroSchema,
-            LogicalTypes.decimal(decimal.precision(), decimal.scale())).array();
+        if (schema.getLogicalType() instanceof Decimal) {
+          KsqlPreconditions.checkArgument(
+              value instanceof BigDecimal, "expected BigDecimal BYTES value");
+          final BigDecimal decimal = (BigDecimal) value;
+          return new DecimalConversion().toBytes(
+              decimal,
+              avroSchema,
+              LogicalTypes.decimal(decimal.precision(), decimal.scale())).array();
+        } else {
+          return value;
+        }
       case RECORD:
         return givenAvroRecord(schema, (Map<String, ?>) value);
       case ARRAY:

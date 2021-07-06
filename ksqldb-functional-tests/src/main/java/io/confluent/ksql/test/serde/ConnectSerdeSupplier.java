@@ -25,6 +25,7 @@ import io.confluent.ksql.util.DecimalUtil;
 import io.confluent.ksql.util.KsqlConstants;
 import io.confluent.ksql.util.KsqlException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +35,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -197,8 +199,9 @@ public abstract class ConnectSerdeSupplier<T extends ParsedSchema>
             }
 
             throw new TestFrameworkException("DECIMAL type requires JSON number in test data");
+          } else {
+            return spec.toString().getBytes();
           }
-          throw new RuntimeException("Unexpected BYTES type " + schema.name());
         default:
           throw new RuntimeException(
               "This test does not support the data type yet: " + schema.type());
@@ -283,8 +286,14 @@ public abstract class ConnectSerdeSupplier<T extends ParsedSchema>
             if (data instanceof BigDecimal) {
               return data;
             }
+            throw new RuntimeException("Unexpected BYTES type " + schema.name());
+          } else {
+            if (data instanceof byte[]) {
+              return ByteBuffer.wrap((byte[]) data);
+            } else {
+              return data;
+            }
           }
-          throw new RuntimeException("Unexpected BYTES type " + schema.name());
         default:
           throw new RuntimeException("Test cannot handle data of type: " + schema.type());
       }

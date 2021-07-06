@@ -29,6 +29,7 @@ import io.confluent.ksql.execution.expression.tree.ArithmeticBinaryExpression;
 import io.confluent.ksql.execution.expression.tree.ArithmeticUnaryExpression;
 import io.confluent.ksql.execution.expression.tree.BetweenPredicate;
 import io.confluent.ksql.execution.expression.tree.BooleanLiteral;
+import io.confluent.ksql.execution.expression.tree.BytesLiteral;
 import io.confluent.ksql.execution.expression.tree.Cast;
 import io.confluent.ksql.execution.expression.tree.ComparisonExpression;
 import io.confluent.ksql.execution.expression.tree.CreateArrayExpression;
@@ -265,6 +266,14 @@ public class TermCompiler implements ExpressionVisitor<Term, Context> {
   ) {
     final SqlType sqlType = DecimalUtil.fromValue(decimalLiteral.getValue());
     return LiteralTerms.of(decimalLiteral.getValue(), sqlType);
+  }
+
+  @Override
+  public Term visitBytesLiteral(
+      final BytesLiteral bytesLiteral,
+      final Context context
+  ) {
+    return null;
   }
 
   @Override

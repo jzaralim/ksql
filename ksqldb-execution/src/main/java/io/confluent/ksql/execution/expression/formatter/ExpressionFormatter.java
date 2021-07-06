@@ -24,6 +24,7 @@ import io.confluent.ksql.execution.expression.tree.ArithmeticBinaryExpression;
 import io.confluent.ksql.execution.expression.tree.ArithmeticUnaryExpression;
 import io.confluent.ksql.execution.expression.tree.BetweenPredicate;
 import io.confluent.ksql.execution.expression.tree.BooleanLiteral;
+import io.confluent.ksql.execution.expression.tree.BytesLiteral;
 import io.confluent.ksql.execution.expression.tree.Cast;
 import io.confluent.ksql.execution.expression.tree.ComparisonExpression;
 import io.confluent.ksql.execution.expression.tree.CreateArrayExpression;
@@ -187,6 +188,11 @@ public final class ExpressionFormatter {
 
     @Override
     public String visitDecimalLiteral(final DecimalLiteral node, final Context context) {
+      return node.getValue().toString();
+    }
+
+    @Override
+    public String visitBytesLiteral(final BytesLiteral node, final Context context) {
       return node.getValue().toString();
     }
 

@@ -361,6 +361,19 @@ public class ConnectDataTranslatorTest {
   }
 
   @Test
+  public void shouldReturnBytesType() {
+    // Given:
+    final ConnectDataTranslator connectToKsqlTranslator = new ConnectDataTranslator(Schema.OPTIONAL_BYTES_SCHEMA);
+
+    // When:
+    final Object row = connectToKsqlTranslator.toKsqlRow(Schema.OPTIONAL_BYTES_SCHEMA, "4");
+
+    // Then:
+    assertTrue(row instanceof java.sql.Timestamp);
+    assertThat(((java.sql.Timestamp) row).getTime(), is(100L));
+  }
+
+  @Test
   public void shouldReturnLongType() {
     // Given:
     final ConnectDataTranslator connectToKsqlTranslator = new ConnectDataTranslator(SchemaBuilder.OPTIONAL_INT64_SCHEMA);

@@ -29,6 +29,7 @@ import io.confluent.ksql.serde.SerdeUtils;
 import io.confluent.ksql.util.DecimalUtil;
 import io.confluent.ksql.util.KsqlException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.utils.Bytes;
 
 class KsqlDelimitedDeserializer implements Deserializer<List<?>> {
 
@@ -61,6 +63,7 @@ class KsqlDelimitedDeserializer implements Deserializer<List<?>> {
       .put(SqlBaseType.BIGINT, t -> Long::parseLong)
       .put(SqlBaseType.DOUBLE, t -> Double::parseDouble)
       .put(SqlBaseType.STRING, t -> v -> v)
+      .put(SqlBaseType.BYTES, KsqlDelimitedDeserializer::toBytes)
       .put(SqlBaseType.DECIMAL, KsqlDelimitedDeserializer::decimalParser)
       .put(SqlBaseType.TIME, KsqlDelimitedDeserializer::timeParser)
       .put(SqlBaseType.DATE, KsqlDelimitedDeserializer::dateParser)
@@ -126,6 +129,10 @@ class KsqlDelimitedDeserializer implements Deserializer<List<?>> {
 
   @Override
   public void close() {
+  }
+
+  private static Parser toBytes(final SqlType sqlType) {
+    return v -> ByteBuffer.wrap(v.getBytes());
   }
 
   private static Parser decimalParser(final SqlType sqlType) {

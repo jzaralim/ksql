@@ -21,12 +21,14 @@ import io.confluent.ksql.schema.ksql.types.SqlBaseType;
 import io.confluent.ksql.schema.utils.SchemaException;
 import io.confluent.ksql.types.KsqlStruct;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.apache.kafka.common.utils.Bytes;
 
 /**
  * Version of JavaToSqlConverter with {@link KsqlStruct} linked in.
@@ -47,6 +49,7 @@ class JavaToSqlConverter implements JavaToSqlTypeConverter {
       .put(Date.class, SqlBaseType.DATE)
       .put(Time.class, SqlBaseType.TIME)
       .put(Timestamp.class, SqlBaseType.TIMESTAMP)
+      .put(ByteBuffer.class, SqlBaseType.BYTES)
       .build();
 
   @Override
