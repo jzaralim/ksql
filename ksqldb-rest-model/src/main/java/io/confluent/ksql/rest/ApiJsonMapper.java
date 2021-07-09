@@ -29,10 +29,12 @@ import io.confluent.ksql.json.StructSerializationModule;
 import io.confluent.ksql.schema.ksql.SqlTimeTypes;
 import io.confluent.ksql.util.KsqlConstants;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.sql.Date;
 import java.sql.Time;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
+import org.apache.commons.codec.binary.Hex;
 
 /**
  * Mapper used by the Rest Api.
@@ -59,6 +61,7 @@ public enum ApiJsonMapper {
       .registerModule(new SimpleModule()
           .addSerializer(Time.class, new TimeSerializer())
           .addSerializer(Date.class, new DateSerializer())
+          .addSerializer(ByteBuffer.class, new BytesSerializer())
       );
 
   public ObjectMapper get() {
@@ -78,6 +81,14 @@ public enum ApiJsonMapper {
     public void serialize(final Date date, final JsonGenerator jsonGenerator,
         final SerializerProvider serializerProvider) throws IOException {
       jsonGenerator.writeString(SqlTimeTypes.formatDate(date));
+    }
+  }
+
+  public static class BytesSerializer extends JsonSerializer<ByteBuffer> {
+    @Override
+    public void serialize(final ByteBuffer bytes, final JsonGenerator jsonGenerator,
+        final SerializerProvider serializerProvider) throws IOException {
+      jsonGenerator.writeString(Hex.encodeHexString(bytes));
     }
   }
 }

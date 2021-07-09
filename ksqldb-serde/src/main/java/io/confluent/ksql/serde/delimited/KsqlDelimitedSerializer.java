@@ -34,8 +34,6 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serializer;
-import org.apache.kafka.common.utils.Bytes;
-
 
 class KsqlDelimitedSerializer implements Serializer<List<?>> {
 
@@ -99,7 +97,7 @@ class KsqlDelimitedSerializer implements Serializer<List<?>> {
         case DECIMAL:
           return handleDecimal((BigDecimal) value);
         case BYTES:
-          return String.valueOf(((ByteBuffer) value).array());
+          return Base64.getMimeEncoder().encodeToString(((ByteBuffer) value).array());
         case TIME:
           return handleTime((Time) value);
         case DATE:

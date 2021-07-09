@@ -8,14 +8,10 @@
         "CREATE STREAM TEST2 AS SELECT * FROM TEST;"
       ],
       "inputs": [
-        {"topic": "test", "value": "abcdefg"},
-        {"topic": "test", "value": "12345"},
-        {"topic": "test", "value": "true"}
+        {"topic": "test", "value": "dmFyaWF0aW9ucw=="}
       ],
       "outputs": [
-        {"topic": "TEST2", "value": "abcdefg"},
-        {"topic": "TEST2", "value": "12345"},
-        {"topic": "TEST2", "value": "true"}
+        {"topic": "TEST2", "value": "dmFyaWF0aW9ucw=="}
       ]
     },
     {
@@ -56,6 +52,32 @@
       ],
       "outputs": [
         {"topic": "TEST2", "value": {"B": "aaa"}}
+      ]
+    },
+    {
+      "name": "tobytes",
+      "statements": [
+        "CREATE STREAM TEST (ID STRING KEY, S STRING) WITH (kafka_topic='test', value_format='JSON');",
+        "CREATE STREAM TEST2 AS SELECT ID, TO_BYTES(S, 'ascii') AS RESULT FROM TEST;"
+      ],
+      "inputs": [
+        {"topic": "test", "value": {"S": "ABC"}}
+      ],
+      "outputs": [
+        {"topic": "TEST2", "value": {"RESULT": 1}}
+      ]
+    },
+    {
+      "name": "bytes in complex types",
+      "statements": [
+        "CREATE STREAM TEST (ID STRING KEY, S STRUCT<B BYTES>, A ARRAY<BYTES>, M MAP<STRING, BYTES>) WITH (kafka_topic='test', value_format='AVRO');",
+        "CREATE STREAM TEST2 AS SELECT ID, S -> B AS S, A[1] AS A, M['B'] AS M FROM TEST;"
+      ],
+      "inputs": [
+        {"topic": "test", "value": {"S": {"B": "1"}, "A":  ["5", "10"], "M":  {"B": "4"}}}
+      ],
+      "outputs": [
+        {"topic": "TEST2", "value": {"S": 1, "A":  5, "M": 4}}
       ]
     }
   ]

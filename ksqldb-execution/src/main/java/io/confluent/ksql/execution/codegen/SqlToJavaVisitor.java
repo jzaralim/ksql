@@ -111,7 +111,6 @@ import io.confluent.ksql.util.Pair;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -149,7 +148,6 @@ public class SqlToJavaVisitor {
       "com.google.common.collect.ImmutableList",
       "com.google.common.collect.ImmutableMap",
       "java.util.function.Supplier",
-      "java.util.Base64",
       "java.nio.ByteBuffer",
       Function.class.getCanonicalName(),
       BiFunction.class.getCanonicalName(),
@@ -409,9 +407,13 @@ public class SqlToJavaVisitor {
         final BytesLiteral bytesLiteral,
         final Context context
     ) {
-      ByteBuffer.
+      final StringBuilder bytesList = new StringBuilder();
+      for (byte b : bytesLiteral.getValue().array()) {
+        bytesList.append(b);
+        bytesList.append(',');
+      }
       return new Pair<>(
-          "ByteBuffer.wrap(" + bytesLiteral.getValue(). + ")",
+          "ByteBuffer.wrap(new byte[]{" + bytesList.toString() + "})",
           SqlTypes.BYTES
       );
     }

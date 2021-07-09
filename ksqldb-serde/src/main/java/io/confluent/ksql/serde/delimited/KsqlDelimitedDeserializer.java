@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +43,6 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.utils.Bytes;
 
 class KsqlDelimitedDeserializer implements Deserializer<List<?>> {
 
@@ -132,7 +132,7 @@ class KsqlDelimitedDeserializer implements Deserializer<List<?>> {
   }
 
   private static Parser toBytes(final SqlType sqlType) {
-    return v -> ByteBuffer.wrap(v.getBytes());
+    return v -> ByteBuffer.wrap(Base64.getMimeDecoder().decode(v));
   }
 
   private static Parser decimalParser(final SqlType sqlType) {

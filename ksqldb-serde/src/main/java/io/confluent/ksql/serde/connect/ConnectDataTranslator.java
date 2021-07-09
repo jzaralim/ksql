@@ -17,18 +17,12 @@ package io.confluent.ksql.serde.connect;
 
 import io.confluent.ksql.serde.SerdeUtils;
 import io.confluent.ksql.util.DecimalUtil;
-import io.confluent.ksql.util.KsqlPreconditions;
-import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Predicate;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.connect.data.Date;
-import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
@@ -89,18 +83,6 @@ public class ConnectDataTranslator implements DataTranslator {
       if (connectSchema.type().equals(type)) {
         return;
       }
-    }
-    throwTypeMismatchException(pathStr, schema, connectSchema);
-  }
-
-  private static void validateType(
-      final String pathStr,
-      final Schema schema,
-      final Schema connectSchema,
-      final Predicate<Schema> requirement
-  ) {
-    if (requirement.test(connectSchema)) {
-      return;
     }
     throwTypeMismatchException(pathStr, schema, connectSchema);
   }

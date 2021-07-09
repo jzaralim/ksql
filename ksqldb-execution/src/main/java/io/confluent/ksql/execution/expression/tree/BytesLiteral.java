@@ -41,7 +41,7 @@ public class BytesLiteral extends Literal {
   }
 
   @Override
-  protected <R, C> R accept(ExpressionVisitor<R, C> visitor, C context) {
+  protected <R, C> R accept(final ExpressionVisitor<R, C> visitor, final C context) {
     return visitor.visitBytesLiteral(this, context);
   }
 

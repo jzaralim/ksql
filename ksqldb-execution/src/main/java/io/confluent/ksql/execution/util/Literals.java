@@ -34,7 +34,6 @@ import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.function.Function;
-import org.apache.kafka.common.utils.Bytes;
 
 /**
  * Literal helpers

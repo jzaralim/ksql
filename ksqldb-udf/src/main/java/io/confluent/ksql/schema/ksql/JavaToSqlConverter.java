@@ -28,7 +28,6 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.apache.kafka.common.utils.Bytes;
 
 /**
  * Version of JavaToSqlConverter with {@link KsqlStruct} linked in.

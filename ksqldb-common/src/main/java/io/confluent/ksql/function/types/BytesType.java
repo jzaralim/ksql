@@ -26,7 +26,7 @@ public class BytesType extends ObjectType {
 
   @Override
   public boolean equals(final Object obj) {
-    return obj instanceof IntervalUnitType;
+    return obj instanceof BytesType;
   }
 
   @Override
