@@ -140,6 +140,30 @@ The great-circle distance between two lat-long points, both specified
 in decimal degrees. An optional final parameter specifies `KM`
 (the default) or `miles`.
 
+### `GREATEST`
+
+Since: 0.20.0
+
+```sql
+GREATEST(col1, col2...)
+```
+
+The highest non-null value among a variable number of comparable columns.
+If comparing columns of different numerical types, use [CAST](#cast) to first
+cast them to be of the same type.
+
+### `LEAST`
+
+Since: 0.20.0
+
+```sql
+LEAST(col1, col2...)
+```
+
+The highest non-null value among a variable number of comparable columns.
+If comparing columns of different numerical types, use [CAST](#cast) to first
+cast them to be of the same type.
+
 ### `LN`
 
 Since: 0.6.0
@@ -673,17 +697,19 @@ The result of EXTRACTJSONFIELD is always a STRING. Use `CAST` to convert the res
 type. For example, `CAST(EXTRACTJSONFIELD(message, '$.log.instance') AS INT)` will extract the
 instance number from the above JSON object as a INT.
 
+The return type of the UDF is STRING, so JSONPaths that select
+multiple elements, like those containing wildcards, aren't supported.
+
 !!! note
     EXTRACTJSONFIELD is useful for extracting data from JSON where either the schema of the JSON
     data is not static, or where the JSON data is embedded in a row encoded using a different
     format, for example, a JSON field within an Avro-encoded message.
 
     If the whole row is encoded as JSON with a known schema or structure, use the `JSON` format and
-
     define the structure as the source's columns.  For example, a stream of JSON objects similar to
     the example above could be defined using a statement similar to this:
 
-    `CREATE STREAM LOGS (LOG STRUCT<CLOUD STRING, APP STRING, INSTANCE INT, ...) WITH (VALUE_FORMAT=JSON, ...)`
+    `CREATE STREAM LOGS (LOG STRUCT<CLOUD STRING, APP STRING, INSTANCE INT>, ...) WITH (VALUE_FORMAT='JSON', ...)`
 
 ### `INITCAP`
 
@@ -1082,11 +1108,14 @@ complex type are not inspected.
 Since: 0.6.0
 
 ```sql
-UNIX_DATE()
+UNIX_DATE([date])
 ```
- 
-Gets an integer representing days since epoch. The returned timestamp
-may differ depending on the local time of different ksqlDB Server instances.
+
+If `UNIX_DATE` is called with the date parameter, the function returns the DATE
+value as an INTEGER value representing the number of days since `1970-01-01`.
+
+If the `date` parameter is not provided, it returns an integer representing days since `1970-01-01`.
+The returned integer may differ depending on the local time of different ksqlDB Server instances.
 
 ### `UNIX_TIMESTAMP`
 
@@ -1273,6 +1302,14 @@ FROM_UNIXTIME(milliseconds)
 ```
 
 Converts a BIGINT millisecond timestamp value into a TIMESTAMP value.
+
+### `FROM_DAYS`
+
+```sql
+FROM_DAYS(days)
+```
+
+Converts an INT number of days since epoch to a DATE value.
 
 ### TIMESTAMPADD
 
